@@ -46,7 +46,7 @@ def fetch_match_results(start_date, end_date, team_id):
 
 def fetch_odds(fixture_id):
     response = requests.get(
-        f'https://api.sportmonks.com/v3/football/odds/fixture/{fixture_id}',
+        f'https://api.sportmonks.com/v3/football/odds/pre-match/fixtures/{fixture_id}',
         params={'api_token': API_TOKEN}
     )
     return response.json()
@@ -83,6 +83,32 @@ def get_winner_loser(match):
         print("No match")
     return winner, loser, draw
 
+def filter_odds(odds_data):
+    relevant_odds = {
+        'home_win': None,
+        'away_win': None,
+        'draw': None,
+        'home_lose': None,
+        'away_lose': None
+    }
+
+    if 'data' in odds_data:
+        for bookmaker in odds_data['data']:
+            market_description = bookmaker.get('market_description', '').lower()
+            label = bookmaker.get('label', '').lower()
+            
+            if 'match winner' in market_description:
+                if label == 'home':
+                    relevant_odds['home_win'] = bookmaker['value']
+                    relevant_odds['away_lose'] = bookmaker['value']  # away lose is same as home win
+                elif label == 'away':
+                    relevant_odds['away_win'] = bookmaker['value']
+                    relevant_odds['home_lose'] = bookmaker['value']  # home lose is same as away win
+                elif label == 'draw':
+                    relevant_odds['draw'] = bookmaker['value']
+
+    return relevant_odds
+
 #maximum 100 days
 start_date = '2024-05-07'
 end_date = '2024-05-15'
@@ -94,14 +120,12 @@ for team_name, team_id in TEAM_IDS.items():
     if 'data' in match_results:
         for match_result in match_results['data']:
             match_result_id = match_result['id']
-            odds = fetch_odds(match_result_id)
-            match_odds = odds.get('data', [])
-
-            # Process match results and odds
             winner, loser, draw = get_winner_loser(match_result)
             if winner is None:
                 continue
-
+            
+            odds_data = fetch_odds(match_result_id)
+            match_odds = filter_odds(odds_data)
             if draw:
                 print(f'{team_name} Match Result: {winner} ended in a draw against {loser}, Odds: {match_odds}')
             else: 
