@@ -7,5 +7,7 @@ export async function GET() {
     const teamsData = await res.json();
     console.log(teamsData);
     return new Response(JSON.stringify(teamsData), { status: 200 });
-  } catch (error) {}
+  } catch (error) {
+    return new Response("Something went wwrong", { status: 500 });
+  }
 }

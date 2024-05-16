@@ -9,7 +9,9 @@ const Teams = () => {
         const res = await fetch("/api/teams");
         const teams = await res.json();
         setTeamsData(teams.data);
-      } catch (error) {}
+      } catch (error) {
+        console.error("Error fetching teams:", error);
+      }
     };
     fetchTeams();
   }, []);
