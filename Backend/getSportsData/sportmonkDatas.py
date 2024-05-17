@@ -1,24 +1,4 @@
-'''
-Fetch Team IDs :
-GET /v3/football/teams/seasons/{season_id}?api_token=YOUR_API_TOKEN
-https://api.sportmonks.com/v3/football/teams/seasons/{season_id}?api_token=YOUR_API_TOKEN
-
-Fetch Match Results :
-GET /v3/football/fixtures/between/{start_date}/{end_date}?api_token=YOUR_API_TOKEN&team_ids={team_id}
-https://api.sportmonks.com/v3/football/fixtures/between/{start_date}/{end_date}?api_token=YOUR_API_TOKEN&team_ids={team_id}
-
-Fetch Odds :
-GET /v3/football/odds/fixture/{fixture_id}?api_token=YOUR_API_TOKEN
-https://api.sportmonks.com/v3/football/odds/fixture/{fixture_id}?api_token=YOUR_API_TOKEN
-
-
-Fetch Player Statistics : 
-GET /v3/football/players/{player_id}?api_token=YOUR_API_TOKEN&include=stats
-https://api.sportmonks.com/v3/football/players/{player_id}?api_token=YOUR_API_TOKEN&include=stats
-'''
-
 import requests
-from datetime import datetime
 
 API_TOKEN = 'bFmPEsWn6EQXYkEyy1zfuTi3WhQWD2dKcoxeKyhhb5Ya1TqzCDQuSAbKSkkM'
 
@@ -38,6 +18,11 @@ TEAM_IDS = {
 
 
 def fetch_match_results(start_date, end_date, team_id):
+    """
+    start date (string): start date of the analysed macthes
+    end_date (string): end date of the analysed macthes
+    team_IDs (dict): Sportmonk ID of the analysed team
+    """
     response = requests.get(
         f'https://api.sportmonks.com/v3/football/fixtures/between/{start_date}/{end_date}/{team_id}', #sort by date 
         params={'api_token': API_TOKEN,'sort': 'starting_at','order': 'desc'}
@@ -45,6 +30,9 @@ def fetch_match_results(start_date, end_date, team_id):
     return response.json()
 
 def fetch_odds(fixture_id):
+    """
+    fixture_id (string): Sportmonk ID of the analysed match
+    """
     response = requests.get(
         f'https://api.sportmonks.com/v3/football/odds/pre-match/fixtures/{fixture_id}',
         params={'api_token': API_TOKEN}
@@ -52,6 +40,9 @@ def fetch_odds(fixture_id):
     return response.json()
 
 def fetch_player_statistics(team_id):
+    """
+    fixture_id (string): Sportmonk ID of the analysed team
+    """
     response = requests.get(
         f'https://api.sportmonks.com/v3/football/players/team/{team_id}',
         params={'api_token': API_TOKEN, 'include': 'stats'}
@@ -59,6 +50,9 @@ def fetch_player_statistics(team_id):
     return response.json()
 
 def get_winner_loser(match):
+    """
+    match (dict): All datas corresponding to the analysed match through the fixture API request
+    """
     teams = match['name']
     result_info = match['result_info']
 
@@ -84,6 +78,9 @@ def get_winner_loser(match):
     return winner, loser, draw
 
 def filter_odds(odds_data):
+    """
+    odds_data (dict): All pre-match odds data for the analysed match through the pre-match odds API request
+    """
     relevant_odds = {
         'home_win': None,
         'away_win': None,
@@ -113,31 +110,41 @@ def filter_odds(odds_data):
 start_date = '2024-05-07'
 end_date = '2024-05-15'
 
-for team_name, team_id in TEAM_IDS.items():
-    print(f"Processing team: {team_name} (ID: {team_id})")
-    match_results = fetch_match_results(start_date, end_date, team_id)
-    
-    if 'data' in match_results:
-        for match_result in match_results['data']:
-            match_result_id = match_result['id']
-            winner, loser, draw = get_winner_loser(match_result)
-            if winner is None:
-                continue
-            
-            odds_data = fetch_odds(match_result_id)
-            match_odds = filter_odds(odds_data)
-            if draw:
-                print(f'{team_name} Match Result: {winner} ended in a draw against {loser}, Odds: {match_odds}')
-            else: 
-                if winner == team_name:
-                    print(f'{team_name} Match Result: {winner} won against {loser}, Odds: {match_odds}')
-                elif loser == team_name:
-                    print(f'{team_name} Match Result: {loser} lost against {winner}, Odds: {match_odds}')
-                else:
-                    print(f"Failed to fetch match results for {team_name}")
-    else:
-        print(f"Failed to fetch match results for {team_name}")
+def Result_summury(start_date, end_date, team_IDs):
+    """
+    start date (string): start date of the analysed macthes
+    end_date (string): end date of the analysed macthes
+    team_IDs (dict): Table of analysed team matches and their corresponding Sportmonk IDs
+    """
+    for team_name, team_id in team_IDs.items():
+        print(f"Processing team: {team_name} (ID: {team_id})")
+        match_results = fetch_match_results(start_date, end_date, team_id)
+        
+        if 'data' in match_results:
+            for match_result in match_results['data']:
+                match_result_id = match_result['id']
+                winner, loser, draw = get_winner_loser(match_result)
+                if winner is None:
+                    continue
+                
+                odds_data = fetch_odds(match_result_id)
+                match_odds = filter_odds(odds_data)
+                if draw:
+                    print(f'{team_name} Match Result: {winner} ended in a draw against {loser}, Odds: {match_odds}')
+                else: 
+                    if winner == team_name:
+                        print(f'{team_name} Match Result: {winner} won against {loser}, Odds: {match_odds}')
+                    elif loser == team_name:
+                        print(f'{team_name} Match Result: {loser} lost against {winner}, Odds: {match_odds}')
+                    else:
+                        print(f"Failed to fetch match results for {team_name}")
+        else:
+            print(f"Failed to fetch match results for {team_name}")
 
+Result_summury(start_date, end_date, TEAM_IDS)
+
+
+'''
 # Fetch player statistics
 for team_name, team_id in TEAM_IDS.items():
     players = fetch_player_statistics(team_id)
@@ -153,3 +160,4 @@ for team_name, team_id in TEAM_IDS.items():
             print(f'{team_name} Player Stats: {player_stats}')
     else:
         print(f"Failed to fetch player statistics for {team_name}")
+'''

@@ -34,13 +34,11 @@ contract SportsToken is ERC20, ChainlinkClient {
         fee = 0.1 * 10 ** 18; // Fee in LINK tokens
     }
 
-    function mint(address addressTo, uint256 amount) public {
-        require(msg.sender == admin, "Only the admin account can emit tokens");
+    function mint(address addressTo, uint256 amount) public onlyOwner{
         _mint(addressTo, amount);
     }
 
-    function burn(address addressFrom, uint256 amount) public {
-        require(msg.sender == admin, "Only the admin account can burn tokens");
+    function burn(address addressFrom, uint256 amount) public onlyOwner{
         _burn(addressFrom, amount);
     }
 
@@ -115,6 +113,11 @@ contract SportsToken is ERC20, ChainlinkClient {
             j /= 10;
         }
         return string(bstr);
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == owner);
+        _;
     }
 }
 
