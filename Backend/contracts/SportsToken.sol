@@ -90,7 +90,7 @@ contract SportsToken is ERC20, ChainlinkClient {
 
     // Chainlink callback function
     function fulfill(bytes32 _requestId, uint256 result, uint256 odds) public recordChainlinkFulfillment(_requestId) {
-        uint256 teamId = ''; // parse teamId from the request ID or keep a mapping if needed
+        uint256 teamId = uint256(_requestId); // Assuming teamId is encoded in requestId
         gameData[teamId] = GameData(result, odds);
     }
 

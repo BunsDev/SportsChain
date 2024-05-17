@@ -106,10 +106,8 @@ function filterOdds(oddsData) {
 
   const relevantOdds = {
     home_win: null,
-    away_win: null,
     draw: null,
     home_lose: null,
-    away_lose: null
   };
 
   if ('data' in oddsData) {
@@ -120,9 +118,7 @@ function filterOdds(oddsData) {
       if (marketDescription.includes('match winner')) {
         if (label === 'home') {
           relevantOdds.home_win = bookmaker.value;
-          relevantOdds.away_lose = bookmaker.value;  // away lose is same as home win
         } else if (label === 'away') {
-          relevantOdds.away_win = bookmaker.value;
           relevantOdds.home_lose = bookmaker.value;  // home lose is same as away win
         } else if (label === 'draw') {
           relevantOdds.draw = bookmaker.value;
