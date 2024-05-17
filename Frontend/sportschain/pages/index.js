@@ -1,6 +1,12 @@
 import { Box, Button, Flex, Heading, Image, Stack, Text, Link } from "@chakra-ui/react";
+import { useAuth } from "../context/authContext.js";
 
-export default function Home({ login,signin }) {
+export default function Home() {
+  const { connect, disconnect, loggedIn } = useAuth();
+
+  // Ajoutez des logs pour vérifier l'état de loggedIn
+  console.log('LoggedIn state:', loggedIn);
+
   return (
     <Box bg="black" color="white" minH="100vh">
       {/* Header */}
@@ -8,10 +14,10 @@ export default function Home({ login,signin }) {
         <Flex align="center">
           <Image src="/sportschain.png" alt="Logo" h="80px" />
           <Flex ml={4}>
-            <Link href="#" color="white.400" fontSize="3xl" fontWeight="bold" mx={1}>SportsChain</Link>
+            <Link href="#" color="white" fontSize="3xl" fontWeight="bold" mx={1}>SportsChain</Link>
           </Flex>
         </Flex>
-      </Flex>
+             </Flex>
 
       {/* Main Section */}
       <Box
@@ -23,22 +29,28 @@ export default function Home({ login,signin }) {
         py={20}
         px={4}
       >
-
         <Heading as="h1" size="4xl" mb={4}>
-        FootBall Trading Platform
+          FootBall Trading Platform
         </Heading>
-        <Text fontSize="2xl" mb={4}>
-        </Text>
+        <Text fontSize="2xl" mb={4}></Text>
         <Text fontSize="lg" mb={8}>
           Discover our new trading platform for sports teams where the value of tokens varies based on the real performance of the teams. Buy, sell, and trade tokens representing your favorite teams with unique rewards.
         </Text>
         <Stack direction="row" spacing={8} justify="center">
-          <Button colorScheme="gray" size="lg" onClick={signin}>
-            Sign up
-          </Button>
-          <Button colorScheme="teal" size="lg" onClick={login}>
-            Login
-          </Button>
+          {loggedIn ? (
+            <Button colorScheme="red" size="lg" onClick={connect}>
+              Logout
+            </Button>
+          ) : (
+            <>
+              <Button colorScheme="gray" size="lg" onClick={connect}>
+                Sign up
+              </Button>
+              <Button colorScheme="teal" size="lg" onClick={connect}>
+                Login
+              </Button>
+            </>
+          )}
         </Stack>
       </Box>
     </Box>
