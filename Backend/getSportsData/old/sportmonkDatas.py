@@ -1,3 +1,4 @@
+
 import requests
 
 API_TOKEN = 'bFmPEsWn6EQXYkEyy1zfuTi3WhQWD2dKcoxeKyhhb5Ya1TqzCDQuSAbKSkkM'
@@ -41,7 +42,7 @@ def fetch_odds(fixture_id):
 
 def fetch_player_statistics(team_id):
     """
-    fixture_id (string): Sportmonk ID of the analysed team
+    team_id (string): Sportmonk ID of the analysed team
     """
     response = requests.get(
         f'https://api.sportmonks.com/v3/football/players/team/{team_id}',
@@ -142,7 +143,6 @@ def Result_summury(start_date, end_date, team_IDs):
             print(f"Failed to fetch match results for {team_name}")
 
 Result_summury(start_date, end_date, TEAM_IDS)
-
 
 '''
 # Fetch player statistics
