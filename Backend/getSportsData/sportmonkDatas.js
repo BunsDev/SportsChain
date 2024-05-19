@@ -130,6 +130,29 @@ function filterOdds(oddsData) {
   return relevantOdds;
 }
 
+function formatData(matchResults){
+  let formatedData = [];
+  for (const [teamName, matches] of Object.entries(matchResults)) { //iteration in the dict {"FC Copenhagen":[{"matchResultId":19104340,"winner":"FC Copenhagen","loser":"Brøndby","draw":false,"odds":{"home_win":"2.97","away_win":"2.15","draw":"3.45","home_lose":"2.15","away_lose":"2.97"}}]
+    for (const match of matches) { //if multiple matches per teams
+        let formatedResult;
+        if (match.draw === true) { //check the draw boolean
+          formatedResult = 0;
+            odds = match.odds.draw
+        }
+        else{
+            if (match.winner === teamName) { // check winning team
+              formatedResult = 1; // The team is the winner
+                odds = match.odds.home_win
+            } else {
+              formatedResult = 2; // The team is the loser
+                odds = match.odds.home_lose
+            }
+        }
+        formatedData.push([teamName, formatedResult, odds]);
+      }
+  }
+  return formatedData;
+}
 async function resultSummary(startDate, endDate, teamIDs = TEAM_IDS) {
   /*
   startDate (string): start date of the analysed macthes
@@ -182,9 +205,11 @@ async function resultSummary(startDate, endDate, teamIDs = TEAM_IDS) {
       console.log(`Failed to fetch match results for ${teamName}`);
     }
   }
+
+  const formatedData = formatData(results);
   // Send the results to the API
   try {
-    const response = await axios.post('http://localhost:3000/api/match-results', results);
+    const response = await axios.post('http://localhost:3000/api/match-results', formatedData);
     console.log('Data sent successfully:', response.data);
   } catch (error) {
     console.error('Error sending data:', error);

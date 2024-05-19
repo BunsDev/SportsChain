@@ -13,7 +13,7 @@ contract SportsToken is ERC20, ChainlinkClient {
     // Chainlink variables
     address private oracle;
     bytes32 private jobId;
-    uint256 private fee;
+    uint256 private gasLimit;
     
     // Store data from Chainlink
     struct GameData {
@@ -31,7 +31,7 @@ contract SportsToken is ERC20, ChainlinkClient {
         setChainlinkToken(0x326C977E6efc84E512bB9C30f76E30c160eD06FB); // Example LINK token address for Polygon
         oracle = 0x6Df09E975c830ECae5bd4eD9d90f3A95a4f88012; // Chainlink Oracle address
         jobId = "b7286d485fca455e9e9f0e400c791d7b"; // Job ID
-        fee = 0.1 * 10 ** 18; // Fee in LINK tokens
+        gasLimit = 0.2 * 10 ** 18; // Fee in LINK tokens
     }
 
     function mint(address addressTo, uint256 amount) public onlyOwner{
@@ -85,7 +85,7 @@ contract SportsToken is ERC20, ChainlinkClient {
     function requestGameData(uint256 teamId) public {
         Chainlink.Request memory request = buildChainlinkRequest(jobId, address(this), this.fulfill.selector);
         request.add("teamId", uint2str(teamId));
-        sendChainlinkRequestTo(oracle, request, fee);
+        sendChainlinkRequestTo(oracle, request, gasLimit);
     }
 
     // Chainlink callback function
@@ -121,3 +121,4 @@ contract SportsToken is ERC20, ChainlinkClient {
     }
 }
 
+git clone https://github.com/smartcontractkit/chainlink-functions-demo-app.git && cd chainlink-functions-demo-app
