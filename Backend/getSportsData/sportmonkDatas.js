@@ -28,7 +28,12 @@ async function fetchMatchResults(startDate, endDate, teamId) {
 
   try {
     const response = await axios.get(`https://api.sportmonks.com/v3/football/fixtures/between/${startDate}/${endDate}/${teamId}`, { //sort by date 
-      params: { api_token: API_TOKEN, sort: 'starting_at', order: 'desc' }
+    params: {
+      start: startDate,
+      end: endDate,
+      team_id: teamId,
+      api_token: API_TOKEN
+    }
     });
     return response.data;
   } catch (error) {
@@ -43,7 +48,10 @@ async function fetchOdds(fixtureId) {
 
   try {
     const response = await axios.get(`https://api.sportmonks.com/v3/football/odds/pre-match/fixtures/${fixtureId}`, {
-      params: { api_token: API_TOKEN }
+      params: { 
+        id: fixtureId,
+        api_token: API_TOKEN
+      }
     });
     return response.data;
   } catch (error) {

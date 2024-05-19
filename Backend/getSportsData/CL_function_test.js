@@ -28,7 +28,7 @@ async function main() {
       // Fetch match results
       try {
         const matchResultsRequest = await axios.get(`https://api.sportmonks.com/v3/football/fixtures/between/${startDate}/${endDate}/${teamId}`, { //sort by date 
-        params: { api_token: API_TOKEN, sort: 'starting_at', order: 'desc' }
+        params: { api_token: API_TOKEN }
         });
         const matchResultsResponse = await matchResultsRequest;
         const matchResults = matchResultsResponse.data;

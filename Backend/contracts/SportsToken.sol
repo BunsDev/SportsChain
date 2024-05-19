@@ -9,12 +9,13 @@ contract SportsToken is ERC20, ChainlinkClient {
 
     address public admin; //Administrator that manage tokens
     uint256 public tokenprice;
+    bool public tradingBlocked;
     
     // Chainlink variables
     address private oracle;
     bytes32 private jobId;
     uint256 private gasLimit;
-    
+
     // Store data from Chainlink
     struct GameData {
         uint256 result;
@@ -22,6 +23,10 @@ contract SportsToken is ERC20, ChainlinkClient {
     }
     
     mapping(uint256 => GameData) public gameData;
+
+    event TradingBlocked();
+    event TradingUnblocked();
+    event TokenPriceUpdated(uint256 newPrice);
 
     constructor(string memory name, string memory symbol) ERC20(name, symbol) {
         admin = msg.sender;
@@ -34,6 +39,26 @@ contract SportsToken is ERC20, ChainlinkClient {
         gasLimit = 0.2 * 10 ** 18; // Fee in LINK tokens
     }
 
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only owner can call this function");
+        _;
+    }
+
+    modifier tradingNotBlocked() { //affect the lock to the sell and buy functions
+        require(!tradingBlocked, "Trading is currently blocked");
+        _;
+    }
+
+    function blockTrading() external onlyAdmin { // call this function to lock trading
+        tradingBlocked = true;
+        emit TradingBlocked();
+    }
+
+    function unblockTrading() external onlyAdmin { // call this function to unlock trading
+        tradingBlocked = false;
+        emit TradingUnblocked();
+    }
+
     function mint(address addressTo, uint256 amount) public onlyOwner{
         _mint(addressTo, amount);
     }
@@ -43,20 +68,20 @@ contract SportsToken is ERC20, ChainlinkClient {
     }
 
     // Buy tokens
-    function buyTokens() external payable {
+    function buyTokens() external payable tradingNotBlocked{
         require(msg.value > 0, "You need Matic/AVAX to buy tokens");
         uint256 amountToBuy = msg.value * getTokenPrice();
         mint(msg.sender, amountToBuy);
     }
 
     // Sell tokens
-    function sellTokens(uint256 amount) external {
+    function sellTokens(uint256 amount) external tradingNotBlocked{
         require(amount > 0 && balanceOf(msg.sender) >= amount, "Invalid balance");
         uint256 maticAmount = amount / getTokenPrice();
         burn(msg.sender, amount);
         payable(msg.sender).transfer(maticAmount);
     }
-
+    
     function calculateNewPrice(uint256 currentPrice, uint256 odds, uint256 result) private pure returns (uint256) {
         uint256 newPrice;
         if (result == 1) { // Win
@@ -114,11 +139,4 @@ contract SportsToken is ERC20, ChainlinkClient {
         }
         return string(bstr);
     }
-
-    modifier onlyOwner() {
-        require(msg.sender == owner);
-        _;
-    }
 }
-
-git clone https://github.com/smartcontractkit/chainlink-functions-demo-app.git && cd chainlink-functions-demo-app
