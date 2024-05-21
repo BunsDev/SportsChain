@@ -1,181 +1,155 @@
-if (!secrets.apiKey) {
+/*
+Chainlink function that operates with match ID
+*/
+
+const apiKey = secrets.API_KEY
+if (!apiKey) {
     throw Error("API key required");
 }
 
-//const API_TOKEN = 'bFmPEsWn6EQXYkEyy1zfuTi3WhQWD2dKcoxeKyhhb5Ya1TqzCDQuSAbKSkkM';
-  
-  const LEAGUE_ID = 271;  // Danish Superliga ID
-  const SEASON_ID = 21644;  // Current season ID
-  const TEAM_IDS = {
-    'FC Copenhagen': 85,
-    'Midtjylland': 939,
-    'Brøndby': 293,
-    'AGF': 2905,
-    'Randers': 2356,
-    'Hvidovre': 8657,
-    'Nordsjælland': 2394,
-    'Vejle': 7466,
-    'Lyngby': 2650
+const TEAM_IDS = {
+    'Chicago Fire FC': '694',
+    'Colorado Rapids SC': '695',
+    'Columbus Crew': '696',
+    'D.C. United SC': '697',
+    'FC Dallas': '698',
+    'Houston Dynamo': '699',
+    'Los Angeles Galaxy': '700',
+    'CF Montréal': '701',
+    'New England Revolution': '702'
   };
-  
-const startDate = '2024-05-07';
-const endDate = '2024-05-15';
 
-/*
-Après avoir règler le problème de récupération des données via API en utilisant chainlink function, 
-transformer le code pour récupérer les données seulement d'un match à partir d'un matchID.
-Les dates/teams lists vont être dans le fichier chainlink_automation.js
-de la même manière on va récupérer les infos match par match et update les token values match par match.
-A la fin de chaque match, les token des deux équipes qui ont jouées vont être update l'un après l'autre.
-*/
-async function main() {
-    const results = {}; // Initialize the matches results dictionary
-  
-    for (const [teamName, teamId] of Object.entries(TEAM_IDS)) {
-      console.log(`Processing team: ${teamName} (ID: ${teamId})`);
-      
-      // Fetch match results
-      try {
-        const matchResultsRequest = Functions.makeHttpRequest({
-          url: `https://api.sportmonks.com/v3/football/fixtures/between/${startDate}/${endDate}/${teamId}`,
-          method: "GET",
-          params: {
-            start: startDate,
-            end: endDate,
-            team_id: teamId,
-            api_token: secrets.apiKey 
-          }
-        });
+const date = '2024-05-18';
 
-        const matchResultsResponse = await matchResultsRequest;
-        const matchResults = matchResultsResponse.data;
+const results = {}; // Initialize the matches results dictionary
 
-        if (matchResults && 'data' in matchResults) {
-          for (const matchResult of matchResults.data) { // get data for each match
-            const matchResultId = matchResult.id;
-            // Determine winner and loser
-            const teams = matchResult.name;
-            const resultInfo = matchResult.result_info;
-            let winner = null;
-            let loser = null;
-            let draw = false;
-  
-            if (teams.includes('vs')) {
-              const [team1, team2] = teams.split(' vs ');
-              if (!resultInfo) {
-                console.log(`Match ${matchResult.id} result not yet received`);
-              } else if (resultInfo.includes('won')) {
-                winner = resultInfo.split(' won')[0].trim();
-                loser = winner === team1 ? team2 : team1;
-              } else if (resultInfo.includes('draw')) {
-                winner = team1;
-                loser = team2;
-                draw = true;
-              } else {
-                console.log('Error: Match result format not recognized');
-              }
+// Fetch match results
+
+const getMatches  = await Functions.makeHttpRequest({url: `https://api.sportsdata.io/v4/soccer/scores/json/SchedulesBasic/mls/2024?key=${apiKey}`});
+const matchResults = getMatches.data.filter(match => match.Day.startsWith(date));
+//console.log(JSON.stringify(matchResults, null ,2));
+if (getMatches.error) {
+    console.log(getMatches.error);
+    throw Error("Request Matches datas failed");
+}
+
+const getOdds = await Functions.makeHttpRequest({url:`https://api.sportsdata.io/v4/soccer/odds/json/GameOddsByDate/MLS/${date}?key=${apiKey}`});
+const oddsData = getOdds.data;
+//console.log(JSON.stringify(oddsData, null ,2));
+if (getOdds.error) {
+    console.log(getOdds.error);
+    throw Error("Request Odds datas failed");
+}
+
+for (const matchResult of matchResults) {
+    const homeTeam = matchResult.HomeTeamName;
+    const awayTeam = matchResult.AwayTeamName;
+    const homeScore = matchResult.HomeTeamScore;
+    const awayScore = matchResult.AwayTeamScore;
+    const homePenaltyScore = matchResult.HomeTeamScorePenalty;
+    const awayPenaltyScore = matchResult.AwayTeamScorePenalty;
+
+
+    let winner = null;
+    let loser = null;
+    let draw = false;
+
+    if (homeScore !== null && awayScore !== null) {
+        if (homePenaltyScore == null && awayPenaltyScore == null){ //check if the match ended with penalties
+            if (homeScore > awayScore) {
+            winner = homeTeam;
+            loser = awayTeam;
+            } else if (homeScore < awayScore) {
+            winner = awayTeam;
+            loser = homeTeam;
             } else {
-              console.log('Error: Match name format not recognized');
+            winner = homeTeam;
+            loser = awayTeam;
+            draw = true;
             }
-  
-            if (!winner) continue;
-  
-            // Fetch odds
-            try {
-              const oddsRequest = Functions.makeHttpRequest({
-                url: `https://api.sportmonks.com/v3/football/odds/pre-match/fixtures/`,
-                method: "GET",
-                params: { 
-                  id: matchResultId,
-                  api_token: secrets.apiKey 
-                }
-              });
-              const oddsResponse = await oddsRequest;
-              const oddsData = oddsResponse.data;
-  
-              // Filter relevant odds
-              const relevantOdds = {
-                home_win: null,
-                draw: null,
-                home_lose: null,
-              };
-  
-              if ('data' in oddsData) {
-                for (const bookmaker of oddsData.data) {
-                  const marketDescription = bookmaker.market_description.toLowerCase();
-                  const label = bookmaker.label.toLowerCase();
-  
-                  if (marketDescription.includes('match winner')) {
-                    if (label === 'home') {
-                      relevantOdds.home_win = bookmaker.value;
-                    } else if (label === 'away') {
-                      relevantOdds.home_lose = bookmaker.value; // home lose is same as away win
-                    } else if (label === 'draw') {
-                      relevantOdds.draw = bookmaker.value;
-                    }
-                  }
-                }
-              }
-  
-              // Store match info
-              const matchInfo = {
-                matchResultId,
-                winner,
-                loser,
-                draw,
-                odds: relevantOdds
-              };
-  
-              // Add the match info to the corresponding team's entry in the results object
-              if (!results[teamName]) {
-                results[teamName] = [];
-              }
-              results[teamName].push(matchInfo);
-  
-              if (draw) { // Console output of each match results
-                console.log(`${teamName} Match Result: ${winner} ended in a draw against ${loser}, Odds: ${JSON.stringify(relevantOdds)}`);
-              } else {
-                if (winner === teamName) {
-                  console.log(`${teamName} Match Result: ${winner} won against ${loser}, Odds: ${JSON.stringify(relevantOdds)}`);
-                } else if (loser === teamName) {
-                  console.log(`${teamName} Match Result: ${loser} lost against ${winner}, Odds: ${JSON.stringify(relevantOdds)}`);
-                } else {
-                  console.log(`Failed to fetch match results for ${teamName}`);
-                }
-              }
-            } catch (error) {
-              console.error(`Error fetching odds: ${error}`);
+        }else{
+            if (homePenaltyScore > awayPenaltyScore) {
+                winner = homeTeam;
+                loser = awayTeam;
+                } else if (homePenaltyScore < awayPenaltyScore) {
+                winner = awayTeam;
+                loser = homeTeam;
             }
-          }
-        } else {
-          console.log(`Failed to fetch match results for ${teamName}`);
         }
-      } catch (error) {
-        console.error(`Error fetching match results: ${error}`);
-      }
+    } else {
+        console.log(`Match ${matchResult.GameId} result not yet received`);
     }
-    let formatedData = [];
-    for (const [teamName, matches] of Object.entries(results)) { //iteration in the dict {"FC Copenhagen":[{"matchResultId":19104340,"winner":"FC Copenhagen","loser":"Brøndby","draw":false,"odds":{"home_win":"2.97","away_win":"2.15","draw":"3.45","home_lose":"2.15","away_lose":"2.97"}}]
-        for (const match of matches) { //if multiple matches per teams
-            let formatedResult;
-            if (match.draw === true) { //check the draw boolean
-                formatedResult = 0;
-                odds = match.odds.draw
-            }
-            else{
-                if (match.winner === teamName) { // check winning team
-                    formatedResult = 1; // The team is the winner
-                    odds = match.odds.home_win
-                } else {
-                    formatedResult = 2; // The team is the loser
-                    odds = match.odds.home_lose
-                }
-            }
-            formatedData.push([teamName, formatedResult, odds]);
-        }
-    }
-    console.log(formatedData);
-    return Functions.encodeString(JSON.stringify(formatedData));
-  }
 
-return main();
+    if (!winner) continue;
+    const matchOdds = {
+        home_win: null,
+        draw: null,
+        home_lose: null,
+    };
+
+    const gameOdds = oddsData.find(odds => odds.GameId === matchResult.GameId);
+
+    if (gameOdds && gameOdds.PregameOdds && gameOdds.PregameOdds.length > 0) {
+        const marketOdds = gameOdds.PregameOdds[0];
+
+        matchOdds.home_win = marketOdds.HomeMoneyLine/100; // get the odds with a % form
+        matchOdds.draw = marketOdds.DrawMoneyLine/100;
+        matchOdds.home_lose = marketOdds.AwayMoneyLine/100;
+    }
+    const matchInfo = {
+        matchResultId: matchResult.GameId,
+        winner,
+        loser,
+        draw,
+        odds: matchOdds,
+        };
+
+        const teamName1 = matchResult.HomeTeamName;
+        const teamName2 = matchResult.AwayTeamName;
+
+        results[teamName1] = results[teamName1] || [];
+        results[teamName1].push(matchInfo);
+
+        results[teamName2] = results[teamName2] || [];
+        results[teamName2].push(matchInfo);
+
+        if (draw) {
+        console.log(`${teamName1} vs ${teamName2} Match Result: ${winner} ended in a draw against ${loser}, Odds: ${JSON.stringify(matchOdds)}`);
+        } else {
+        if (winner === teamName1) {
+            console.log(`${teamName1} Match Result: ${winner} won against ${loser}, Odds: ${JSON.stringify(matchOdds)}`);
+        } else if (loser === teamName1) {
+            console.log(`${teamName1} Match Result: ${loser} lost against ${winner}, Odds: ${JSON.stringify(matchOdds)}`);
+        }
+        if (winner === teamName2) {
+            console.log(`${teamName2} Match Result: ${winner} won against ${loser}, Odds: ${JSON.stringify(matchOdds)}`);
+        } else if (loser === teamName2) {
+            console.log(`${teamName2} Match Result: ${loser} lost against ${winner}, Odds: ${JSON.stringify(matchOdds)}`);
+        } else {
+            console.log(`Failed to fetch match results for ${teamName1} or ${teamName2}`);
+        }
+    }
+}
+let formattedData = [];
+    for (const [teamName, matches] of Object.entries(results)) {
+        for (const match of matches) {
+        let formattedResult;
+        let odds;
+        if (match.draw === true) {
+            formattedResult = 0;
+            odds = match.odds.draw;
+        } else {
+            if (match.winner === teamName) {
+            formattedResult = 1; // The team is the winner
+            odds = match.odds.home_win;
+            } else {
+            formattedResult = 2; // The team is the loser
+            odds = match.odds.home_lose;
+            }
+        }
+        formattedData.push([teamName, formattedResult, odds]);
+        }
+    }
+
+console.log(formattedData);
+return Functions.encodeString(JSON.stringify(formattedData));
