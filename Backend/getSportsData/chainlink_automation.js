@@ -14,7 +14,7 @@ const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
 const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, wallet);
 */
 
-const apiKey = '';
+const apiKey = 'cb593afb54874c6bb19321e6d22b0708';
 
 const TEAM_IDS = {
     'Chicago Fire FC': 694,
@@ -36,16 +36,22 @@ async function fetchMatchResults(teamID, date) {
         date (str): date of the analysed matches
     */
     const getMatches  = await axios.get(`https://api.sportsdata.io/v4/soccer/scores/json/SchedulesBasic/mls/2024?key=${apiKey}`);
-    const matchResults = getMatches.data.filter(match => match.Day.startsWith(date));
+    const matchResults = getMatches.data.filter(match => {
+        // Handle case where DateTime is null
+        if (match.DateTime === null && match.Day.startsWith(date)) {
+            console.log(`Match ${match.GameId} does not have a DateTime for now.`);
+            return false; // or true, based on your requirement
+        }
+        else if (match.DateTime && match.Day.startsWith(date)) {
+            return match.DateTime.startsWith(date);
+        }
+    });
+    
     //console.log(JSON.stringify(matchResults, null ,2));
 
     // Filter match results for the specified team and ensure that the team ID comparison is correct by explicitly converting it to a decimal int
     const teamMatchResults = matchResults.filter(match => match.HomeTeamId === teamID  || match.AwayTeamId === teamID );
     //console.log("Filtered match results:", JSON.stringify(teamMatchResults, null, 2));
-    // Check matches from the filtered results
-    if (teamMatchResults.length === 0) {
-        console.log(`No match results found for team ID: ${teamID}`);
-    }
     return teamMatchResults;
 }
 
@@ -67,7 +73,7 @@ async function scheduleMatchUpdates(teamID, date) {
     if (matchResults && matchResults.length > 0) {
         for (const match of matchResults) { // Get data for each match
             const matchId = match.GameId;
-            const startTime = new Date(match.Day).getTime();
+            const startTime = new Date(match.DateTime).getTime();
             const endTime = startTime + ((90 + 35) * 60 * 1000); // Assuming 90 + 35mins extra-time match time 
             const unblockingTime = endTime + (35 * 60 * 1000); // 35 minutes after the match ends (total of 2h)
             
