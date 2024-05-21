@@ -11,6 +11,7 @@
   "description": "",
   "dependencies": {
     "@chainlink/contracts": "^1.1.0",
+    "dotenv": "^16.4.5",
     "ether.js": "^1.0.0",
     "ethers": "^5.7.2",
     "express": "^4.19.2"

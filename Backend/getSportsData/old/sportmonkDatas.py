@@ -1,7 +1,7 @@
 
 import requests
 
-API_TOKEN = 'bFmPEsWn6EQXYkEyy1zfuTi3WhQWD2dKcoxeKyhhb5Ya1TqzCDQuSAbKSkkM'
+API_TOKEN = ''
 
 LEAGUE_ID = 271  # Danish Superliga ID
 SEASON_ID = 21644  # Current season ID

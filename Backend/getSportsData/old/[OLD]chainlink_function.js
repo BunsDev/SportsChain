@@ -1,8 +1,6 @@
 if (!secrets.apiKey) {
     throw Error("API key required");
 }
-
-//const API_TOKEN = 'bFmPEsWn6EQXYkEyy1zfuTi3WhQWD2dKcoxeKyhhb5Ya1TqzCDQuSAbKSkkM';
   
   const LEAGUE_ID = 271;  // Danish Superliga ID
   const SEASON_ID = 21644;  // Current season ID

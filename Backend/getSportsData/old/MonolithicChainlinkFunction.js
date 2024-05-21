@@ -1,6 +1,5 @@
 const axios = require('axios');
 
-const API_TOKEN = 'cb593afb54874c6bb19321e6d22b0708';
 const TEAM_IDS = {
   'Chicago Fire FC': '694',
   'Colorado Rapids SC': '695',
