@@ -1,6 +1,6 @@
 // Chainlink function
 
-const apiKey = secrets.API_KEY
+const apiKey = secrets.apiKey
 if (!apiKey) {
     throw Error("API key required");
 }
@@ -45,7 +45,7 @@ if (getOdds.error) {
     throw Error("Request Odds datas failed");
 }
 
-
+let teamName = null;
 //Determine the winner, loser, and if the match was a draw
 for (const matchResult of teamMatchResults) { //if there is several matches in a day (not likely to happen)
     const homeTeam = matchResult.HomeTeamName;
@@ -54,6 +54,11 @@ for (const matchResult of teamMatchResults) { //if there is several matches in a
     const awayScore = matchResult.AwayTeamScore;
     const homePenaltyScore = matchResult.HomeTeamScorePenalty;
     const awayPenaltyScore = matchResult.AwayTeamScorePenalty;
+    if (teamID === matchResult.HomeTeamId){
+        teamName = matchResult.HomeTeamName
+    } else if (teamID === matchResult.AwayTeamId){
+        teamName = matchResult.AwayTeamName
+    }
 
 
     let winner = null;
@@ -135,24 +140,6 @@ for (const matchResult of teamMatchResults) { //if there is several matches in a
 
         results[teamID] = results[teamID] || [];
         results[teamID].push(matchInfo);
-
-    // Log the results into the console in a comprehensive way
-    if (draw) {
-        console.log(`${homeTeam} vs ${awayTeam} Match Result: ${winner} ended in a draw against ${loser}, Odds: ${JSON.stringify(matchOdds)}`);
-    } else {
-        if (winner === homeTeam) {
-            console.log(`${homeTeam} Match Result: ${winner} won against ${loser}, Odds: ${JSON.stringify(matchOdds)}`);
-        } else if (loser === homeTeam) {
-            console.log(`${homeTeam} Match Result: ${loser} lost against ${winner}, Odds: ${JSON.stringify(matchOdds)}`);
-        }
-        if (winner === awayTeam) {
-            console.log(`${awayTeam} Match Result: ${winner} won against ${loser}, Odds: ${JSON.stringify(matchOdds)}`);
-        } else if (loser === awayTeam) {
-            console.log(`${awayTeam} Match Result: ${loser} lost against ${winner}, Odds: ${JSON.stringify(matchOdds)}`);
-        } else {
-            console.log(`Failed to fetch match results for ${homeTeam} or ${awayTeam}`);
-        }
-    }
 }
 // Format the match results into an adequate structure to be sent to the smart contract
 let formattedData = [];
@@ -182,12 +169,21 @@ for (const match of teamMatches) {
                 odds = match.odds.home_win; // odds for away team lose
             }
         }
+        odds = parseFloat(odds) //convert into decimal number for calculation within the smart-contract
+
+        // Log the results into the console in a comprehensive way
+        if (match.draw) {
+            console.log(`${match.homeTeam} vs ${match.awayTeam} Match Result: ${match.winner} ended in a draw against ${match.loser}, Odds: ${odds}`);
+        } else {
+            if (match.winner === teamName) {
+                console.log(`${teamName} Match Result: ${match.winner} won against ${match.loser}, Odds: ${odds}`);
+            } else if (match.loser === teamName) {
+                console.log(`${teamName} Match Result: ${match.loser} lost against ${match.winner}, Odds: ${odds}`);
+            }
+        }
     }
-    odds = parseFloat(odds) //convert into decimal number for calculation within the smart-contract
     formattedData.push(teamID, formattedResult, odds);
 }
 
-console.log(formattedData);
-return Functions.encodeString(JSON.stringify(formattedData));
 console.log(formattedData);
 return Functions.encodeString(JSON.stringify(formattedData));

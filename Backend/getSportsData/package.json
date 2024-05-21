@@ -11,10 +11,11 @@
   "description": "",
   "dependencies": {
     "@chainlink/contracts": "^1.1.0",
+    "@chainlink/env-enc": "^1.0.5",
     "dotenv": "^16.4.5",
     "ether.js": "^1.0.0",
     "ethers": "^5.7.2",
-    "ethers": "^5.7.2",
-    "express": "^4.19.2"
+    "express": "^4.19.2",
+    "secp256k1": "^5.0.0"
   }
 }

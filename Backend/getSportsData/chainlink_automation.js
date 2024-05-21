@@ -5,6 +5,7 @@ const ethers = require('ethers');
 const axios = require('axios');
 const fs = require("fs");
 const path = require("path");
+require('dotenv').config();
 
 const {
     SubscriptionManager,
@@ -15,26 +16,25 @@ const {
     FulfillmentCode,
   } = require("@chainlink/functions-toolkit");
 
-const functionsConsumerAbi = require("../../abi/functionsClient.json");
+//const functionsConsumerAbi = "aeaze";
 require("@chainlink/env-enc").config();
 
 const consumerAddress = "0xd2c8b79c75c9fab13533b95fd503758df928869a"; // REPLACE this with your Functions consumer address
 const subscriptionId = 224; // REPLACE this with your subscription ID
+const apiKey = process.env.API_KEY;
 
-const makeRequestAmoy = async (teamID,currentDate) => {
+const makeRequestAmoy = async (teamID = "701",currentDate = "2024-05-18") => {
     // hardcoded for Polygon Amoy
-    const routerAddress = "0x6Df09E975c830ECae5bd4eD9d90f3A95a4f88012";
+    const routerAddress = "0xC22a79eBA640940ABB6dF0f7982cc119578E11De";
     const linkTokenAddress = "0x326C977E6efc84E512bB9C30f76E30c160eD06FB";
     const donId = "fun-polygon-amoy-1";
     const explorerUrl = "https://www.oklink.com/amoy‍";
-
     // Initialize functions settings
-    const source = fs
-    .readFileSync(path.resolve(__dirname, "chainlink_function.js"))
-    .toString();
+    const source = fs.readFileSync(path.resolve(__dirname, "chainlink_function.js")).toString();
     
     const args = [teamID,currentDate];
-    const secrets = {apiKey:process.env.API_KEY};
+    const secrets = { apiKey: process.env.API_KEY };
+    console.log('Secrets:', secrets);
     const gasLimit = 300000;
     
     // Initialize ethers signer and provider to interact with the contracts onchain
@@ -45,8 +45,8 @@ const makeRequestAmoy = async (teamID,currentDate) => {
     );
 
     const rpcUrl = process.env.POLYGON_AMOY_RPC_URL;
-    //if (!rpcUrl)
-       // throw new Error(`rpcUrl not provided  - check your environment variables`);
+    if (!rpcUrl)
+       throw new Error(`rpcUrl not provided  - check your environment variables`);
 
     const provider = new ethers.providers.JsonRpcProvider(rpcUrl);
 
@@ -54,17 +54,15 @@ const makeRequestAmoy = async (teamID,currentDate) => {
     const signer = wallet.connect(provider); // create ethers signer for signing transactions
 
 
-  ///////// START SIMULATION ////////////
+  ///////// START SIMULATION //////////// ✅
 
   console.log("Start simulation...");
-
   const response = await simulateScript({
     source: source,
     args: args,
     bytesArgs: [], // bytesArgs - arguments can be encoded off-chain to bytes.
     secrets: secrets,
   });
-
   console.log("Simulation result", response);
   const errorString = response.errorString;
   if (errorString) {
@@ -81,7 +79,7 @@ const makeRequestAmoy = async (teamID,currentDate) => {
     }
   }
 
-    //////// ESTIMATE REQUEST COSTS ////////
+    //////// ESTIMATE REQUEST COSTS //////// ✅
     console.log("\nEstimate request costs...");
     // Initialize and return SubscriptionManager
     const subscriptionManager = new SubscriptionManager({
@@ -129,7 +127,7 @@ const makeRequestAmoy = async (teamID,currentDate) => {
     if (!githubApiToken)
         throw new Error(
         "githubApiToken not provided - check your environment variables"
-        );
+    );
 
     // Create a new GitHub Gist to store the encrypted secrets
     const gistURL = await createGist(
@@ -262,7 +260,7 @@ const TEAM_IDS = {
 
 let scheduledActions = {}; // To keep track of scheduled actions
 
-async function fetchMatchResults(teamID, date) {
+async function fetchMatchResults(teamID, date) { 
     //    team_IDs (dict): Sportmonk ID of the analysed team
     //    date (str): date of the analysed matches
 
@@ -293,8 +291,8 @@ async function scheduleMatchUpdates(teamID, date) {
         for (const match of matchResults) { // Get data for each match
             const matchId = match.GameId;
             const startTime = new Date(match.DateTime).getTime();
-            const endTime = startTime + ((90 + 35) * 60 * 1000); // Assuming 90 + 35mins extra-time match time 
-            const unblockingTime = endTime + (35 * 60 * 1000); // 35 minutes after the match ends (total of 2h)
+            const endTime = startTime + ((90 + 45) * 60 * 1000); // Assuming 90 + 45mins extra-time match time 
+            const unblockingTime = endTime + (35 * 60 * 1000); // 35 minutes after the match ends (total of 2h10)
             
             // If the match has been rescheduled, clear existing actions
             if (scheduledActions[matchId]) {
@@ -343,8 +341,8 @@ function scheduleAction(time, action) { // execute an action (lock,unlock,update
 function getSportsData(){
     // Calculate startDate as today and endDate as 7 days from today
     const date = new Date();
-    //const currentDate = date.toISOString().split('T')[0]; // format as YYYY-MM-DD
-    const currentDate = '2024-05-18';
+    const currentDate = date.toISOString().split('T')[0]; // format as YYYY-MM-DD
+    //const currentDate = '2024-05-18';
     console.log(currentDate);
 
     for (const teamID of Object.values(TEAM_IDS)) {
@@ -352,7 +350,4 @@ function getSportsData(){
     }
 }
 
-getSportsData().catch((e) => {
-    console.error(e);
-    process.exit(1);
-});
+makeRequestAmoy()
