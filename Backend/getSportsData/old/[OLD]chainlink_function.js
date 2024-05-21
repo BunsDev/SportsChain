@@ -1,6 +1,8 @@
-const axios = require('axios');
+if (!secrets.apiKey) {
+    throw Error("API key required");
+}
 
-const API_TOKEN = 'bFmPEsWn6EQXYkEyy1zfuTi3WhQWD2dKcoxeKyhhb5Ya1TqzCDQuSAbKSkkM';
+//const API_TOKEN = 'bFmPEsWn6EQXYkEyy1zfuTi3WhQWD2dKcoxeKyhhb5Ya1TqzCDQuSAbKSkkM';
   
   const LEAGUE_ID = 271;  // Danish Superliga ID
   const SEASON_ID = 21644;  // Current season ID
@@ -19,6 +21,13 @@ const API_TOKEN = 'bFmPEsWn6EQXYkEyy1zfuTi3WhQWD2dKcoxeKyhhb5Ya1TqzCDQuSAbKSkkM'
 const startDate = '2024-05-07';
 const endDate = '2024-05-15';
 
+/*
+Après avoir règler le problème de récupération des données via API en utilisant chainlink function, 
+transformer le code pour récupérer les données seulement d'un match à partir d'un matchID.
+Les dates/teams lists vont être dans le fichier chainlink_automation.js
+de la même manière on va récupérer les infos match par match et update les token values match par match.
+A la fin de chaque match, les token des deux équipes qui ont jouées vont être update l'un après l'autre.
+*/
 async function main() {
     const results = {}; // Initialize the matches results dictionary
   
@@ -27,16 +36,23 @@ async function main() {
       
       // Fetch match results
       try {
-        const matchResultsRequest = await axios.get(`https://api.sportmonks.com/v3/football/fixtures/between/${startDate}/${endDate}/${teamId}`, { //sort by date 
-        params: { api_token: API_TOKEN }
+        const matchResultsRequest = Functions.makeHttpRequest({
+          url: `https://api.sportmonks.com/v3/football/fixtures/between/${startDate}/${endDate}/${teamId}`,
+          method: "GET",
+          params: {
+            start: startDate,
+            end: endDate,
+            team_id: teamId,
+            api_token: secrets.apiKey 
+          }
         });
+
         const matchResultsResponse = await matchResultsRequest;
         const matchResults = matchResultsResponse.data;
 
         if (matchResults && 'data' in matchResults) {
           for (const matchResult of matchResults.data) { // get data for each match
             const matchResultId = matchResult.id;
-  
             // Determine winner and loser
             const teams = matchResult.name;
             const resultInfo = matchResult.result_info;
@@ -66,11 +82,16 @@ async function main() {
   
             // Fetch odds
             try {
-                const oddsRequest = await axios.get(`https://api.sportmonks.com/v3/football/odds/pre-match/fixtures/${matchResultId}`, {
-                params: { api_token: API_TOKEN }
-                });
-                const oddsResponse = await oddsRequest;
-                const oddsData = oddsResponse.data;
+              const oddsRequest = Functions.makeHttpRequest({
+                url: `https://api.sportmonks.com/v3/football/odds/pre-match/fixtures/`,
+                method: "GET",
+                params: { 
+                  id: matchResultId,
+                  api_token: secrets.apiKey 
+                }
+              });
+              const oddsResponse = await oddsRequest;
+              const oddsData = oddsResponse.data;
   
               // Filter relevant odds
               const relevantOdds = {
@@ -138,15 +159,15 @@ async function main() {
         for (const match of matches) { //if multiple matches per teams
             let formatedResult;
             if (match.draw === true) { //check the draw boolean
-            formatedResult = 0;
+                formatedResult = 0;
                 odds = match.odds.draw
             }
             else{
                 if (match.winner === teamName) { // check winning team
-                formatedResult = 1; // The team is the winner
+                    formatedResult = 1; // The team is the winner
                     odds = match.odds.home_win
                 } else {
-                formatedResult = 2; // The team is the loser
+                    formatedResult = 2; // The team is the loser
                     odds = match.odds.home_lose
                 }
             }
@@ -154,7 +175,7 @@ async function main() {
         }
     }
     console.log(formatedData);
-    //return Functions.encodeString(JSON.stringify(results));
+    return Functions.encodeString(JSON.stringify(formatedData));
   }
-  
-  return main();
+
+return main();

@@ -96,7 +96,7 @@ async function scheduleMatchUpdates(teamId, startDate, endDate) {
                 // Schedule updating token prices
                 update: scheduleAction(endTime, async () => {
                     console.log(`Updating token prices for match ${matchId} at ${new Date(endTime)}`);
-                    //await callChainlinkFunction(matchId);
+                    await callChainlinkFunction(matchId);
                 })
             };
         }
