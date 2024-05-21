@@ -189,3 +189,5 @@ for (const match of teamMatches) {
 
 console.log(formattedData);
 return Functions.encodeString(JSON.stringify(formattedData));
+console.log(formattedData);
+return Functions.encodeString(JSON.stringify(formattedData));
