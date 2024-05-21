@@ -1,6 +1,4 @@
-/*
-Chainlink function that operates with match ID
-*/
+// Chainlink function
 
 const apiKey = secrets.API_KEY
 if (!apiKey) {
@@ -9,24 +7,10 @@ if (!apiKey) {
 
 //Get the team ID
 const teamID = parseInt(args[0], 10); // Ensure the team ID is an integer
-
-/*
-const TEAM_IDS = {
-    'Chicago Fire FC': '694',
-    'Colorado Rapids SC': '695',
-    'Columbus Crew': '696',
-    'D.C. United SC': '697',
-    'FC Dallas': '698',
-    'Houston Dynamo': '699',
-    'Los Angeles Galaxy': '700',
-    'CF Montréal': '701',
-    'New England Revolution': '702'
-  };
-*/
-
-const date = '2024-05-18';
-
-const results = {}; // Initialize the matches results dictionary
+//Get date
+const date = args[1];
+// Initialize the matches results dictionary
+const results = {};
 
 // Fetch match results for a given date
 const getMatches  = await Functions.makeHttpRequest({url: `https://api.sportsdata.io/v4/soccer/scores/json/SchedulesBasic/mls/2024?key=${apiKey}`});
@@ -37,16 +21,6 @@ if (getMatches.error) {
     throw Error("Request Matches datas failed");
 }
 
-//Fetch odds for matches on a given date
-const getOdds = await Functions.makeHttpRequest({url:`https://api.sportsdata.io/v4/soccer/odds/json/GameOddsByDate/MLS/${date}?key=${apiKey}`});
-const oddsData = getOdds.data;
-//console.log(JSON.stringify(oddsData, null ,2));
-if (getOdds.error) {
-    console.log(getOdds.error);
-    throw Error("Request Odds datas failed");
-}
-
-console.log("Team ID:", teamID);
 //console.log("Match Results IDs:", JSON.stringify(matchResults.map(match => ({ HomeTeamId: match.HomeTeamId, AwayTeamId: match.AwayTeamId })), null, 2));
 
 // Filter match results for the specified team
@@ -60,6 +34,15 @@ const teamMatchResults = matchResults.filter(
 // Check matches from the filtered results
 if (teamMatchResults.length === 0) {
     throw Error(`No match results found for team ID: ${teamID}`);
+}
+
+//Fetch odds for matches on a given date
+const getOdds = await Functions.makeHttpRequest({url:`https://api.sportsdata.io/v4/soccer/odds/json/GameOddsByDate/MLS/${date}?key=${apiKey}`});
+const oddsData = getOdds.data;
+//console.log(JSON.stringify(oddsData, null ,2));
+if (getOdds.error) {
+    console.log(getOdds.error);
+    throw Error("Request Odds datas failed");
 }
 
 
@@ -113,14 +96,28 @@ for (const matchResult of teamMatchResults) { //if there is several matches in a
     };
 
     const gameOdds = oddsData.find(odds => odds.GameId === matchResult.GameId);
-    console.log(JSON.stringify(gameOdds, null, 2));
+
     if (gameOdds && gameOdds.PregameOdds && gameOdds.PregameOdds.length > 0) {
         const marketOdds = gameOdds.PregameOdds[0];
 
-        // get the odds with a % form (decimal)
-        matchOdds.home_win = marketOdds.HomeMoneyLine/100;
-        matchOdds.draw = marketOdds.DrawMoneyLine/100;
-        matchOdds.home_lose = marketOdds.AwayMoneyLine/100;
+        // Convert American odds to Decimal (French) odds directly
+        if (marketOdds.HomeMoneyLine > 0) {
+            matchOdds.home_win = (1 + (marketOdds.HomeMoneyLine / 100)).toFixed(2);
+        } else {
+            matchOdds.home_win = (1 + (100 / Math.abs(marketOdds.HomeMoneyLine))).toFixed(2);
+        }
+
+        if (marketOdds.DrawMoneyLine > 0) {
+            matchOdds.draw = (1 + (marketOdds.DrawMoneyLine / 100)).toFixed(2);
+        } else {
+            matchOdds.draw = (1 + (100 / Math.abs(marketOdds.DrawMoneyLine))).toFixed(2);
+        }
+
+        if (marketOdds.AwayMoneyLine > 0) {
+            matchOdds.home_lose = (1 + (marketOdds.AwayMoneyLine / 100)).toFixed(2);
+        } else {
+            matchOdds.home_lose = (1 + (100 / Math.abs(marketOdds.AwayMoneyLine))).toFixed(2);
+        }
     }
 
     //save the matches results
@@ -157,10 +154,10 @@ for (const matchResult of teamMatchResults) { //if there is several matches in a
         }
     }
 }
-
 // Format the match results into an adequate structure to be sent to the smart contract
 let formattedData = [];
 const teamMatches = results[teamID] || [];
+console.log(JSON.stringify(teamMatches, null, 2));
 for (const match of teamMatches) {
     let formattedResult;
     let odds;
@@ -168,15 +165,26 @@ for (const match of teamMatches) {
         formattedResult = 0;
         odds = match.odds.draw;
     } else {
-        if (match.winner === match.homeTeam) {
-            formattedResult = 1; // The home team is the winner
-            odds = teamID === match.HomeTeamId ? match.odds.home_win : match.odds.home_lose;
-        } else {
-            formattedResult = 2; // The away team is the loser
-            odds = teamID === match.AwayTeamId ? match.odds.home_lose : match.odds.home_win;
+        if (teamID === match.HomeTeamId) {
+            if (match.winner === match.homeTeam) {
+                formattedResult = 1; // The team is the winner
+                odds = match.odds.home_win;
+            } else {
+                formattedResult = 2; // The team is the loser
+                odds = match.odds.home_lose;
+            }
+        } else if (teamID === match.AwayTeamId) {
+            if (match.winner === match.awayTeam) {
+                formattedResult = 1; // The team is the winner
+                odds = match.odds.home_lose; // odds for away team win
+            } else {
+                formattedResult = 2; // The team is the loser
+                odds = match.odds.home_win; // odds for away team lose
+            }
         }
     }
-    formattedData.push([teamID, formattedResult, odds]);
+    odds = parseFloat(odds) //convert into decimal number for calculation within the smart-contract
+    formattedData.push(teamID, formattedResult, odds);
 }
 
 console.log(formattedData);

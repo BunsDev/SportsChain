@@ -14,62 +14,60 @@ const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
 const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, wallet);
 */
 
-const API_TOKEN = 'bFmPEsWn6EQXYkEyy1zfuTi3WhQWD2dKcoxeKyhhb5Ya1TqzCDQuSAbKSkkM';
+const apiKey = '';
 
 const TEAM_IDS = {
-    'FC Copenhagen': 85,
-    'Midtjylland': 939,
-    'Brøndby': 293,
-    'AGF': 2905,
-    'Randers': 2356,
-    'Hvidovre': 8657,
-    'Nordsjælland': 2394,
-    'Vejle': 7466,
-    'Lyngby': 2650
+    'Chicago Fire FC': 694,
+    'Colorado Rapids SC': 695,
+    'Columbus Crew': 696,
+    'D.C. United SC': 697,
+    'FC Dallas': 698,
+    'Houston Dynamo': 699,
+    'Los Angeles Galaxy': 700,
+    'CF Montréal': 701,
+    'New England Revolution': 702
   };
 
 let scheduledActions = {}; // To keep track of scheduled actions
 
-async function fetchMatchResults(startDate, endDate, teamId) {
+async function fetchMatchResults(teamID, date) {
     /*
-        start date (string): start date of the analysed macthes
-        end_date (string): end date of the analysed macthes
         team_IDs (dict): Sportmonk ID of the analysed team
+        date (str): date of the analysed matches
     */
+    const getMatches  = await axios.get(`https://api.sportsdata.io/v4/soccer/scores/json/SchedulesBasic/mls/2024?key=${apiKey}`);
+    const matchResults = getMatches.data.filter(match => match.Day.startsWith(date));
+    //console.log(JSON.stringify(matchResults, null ,2));
 
-    try {
-        const response = await axios.get(`https://api.sportmonks.com/v3/football/fixtures/between/${startDate}/${endDate}/${teamId}`, { //sort by date 
-        params: {
-        start: startDate,
-        end: endDate,
-        team_id: teamId,
-        api_token: API_TOKEN
-        }
-        });
-        return response.data;
-    } catch (error) {
-        console.error(`Error fetching match results: ${error}`);
+    // Filter match results for the specified team and ensure that the team ID comparison is correct by explicitly converting it to a decimal int
+    const teamMatchResults = matchResults.filter(match => match.HomeTeamId === teamID  || match.AwayTeamId === teamID );
+    //console.log("Filtered match results:", JSON.stringify(teamMatchResults, null, 2));
+    // Check matches from the filtered results
+    if (teamMatchResults.length === 0) {
+        console.log(`No match results found for team ID: ${teamID}`);
     }
+    return teamMatchResults;
 }
 
-async function callChainlinkFunction(matchId) {
+async function callChainlinkFunction(teamID, currentDate) {
     try {
         const response = await axios.post('https://chainlink-function-url', {
-            matchId: matchId
+            teamid: teamID,
+            date: currentDate
         });
-        console.log(`Chainlink function called successfully for match ${matchId}`, response.data);
+        console.log(`Price successfully updated through chainlink function for the team ${teamID}`, response.data);
     } catch (error) {
-        console.error(`Error calling Chainlink function for match ${matchId}: ${error}`);
+        console.error(`Error calling Chainlink function to update the price token of the team ${teamID}: ${error}`);
     }
 }
 
-async function scheduleMatchUpdates(teamId, startDate, endDate) {
-    const matchResults = await fetchMatchResults(startDate, endDate, teamId); // Get all matches in the given date
+async function scheduleMatchUpdates(teamID, date) {
+    const matchResults = await fetchMatchResults(teamID, date); // Get all matches in the given date
     
-    if (matchResults && 'data' in matchResults) {
-        for (const match of matchResults.data) { //get datas for each match
-            const matchId = match.id;
-            const startTime = new Date(match.starting_at).getTime();
+    if (matchResults && matchResults.length > 0) {
+        for (const match of matchResults) { // Get data for each match
+            const matchId = match.GameId;
+            const startTime = new Date(match.Day).getTime();
             const endTime = startTime + ((90 + 35) * 60 * 1000); // Assuming 90 + 35mins extra-time match time 
             const unblockingTime = endTime + (35 * 60 * 1000); // 35 minutes after the match ends (total of 2h)
             
@@ -95,13 +93,13 @@ async function scheduleMatchUpdates(teamId, startDate, endDate) {
 
                 // Schedule updating token prices
                 update: scheduleAction(endTime, async () => {
-                    console.log(`Updating token prices for match ${matchId} at ${new Date(endTime)}`);
-                    await callChainlinkFunction(matchId);
+                    console.log(`Updating token prices of ${teamID} for match ${matchId} at ${new Date(endTime)}`);
+                    await callChainlinkFunction(teamID, date);
                 })
             };
         }
     } else {
-        console.log(`Failed to fetch match results for ${teamName}`);
+        console.log(`Failed to fetch match results for ${teamID}`);
     }
 }
 
@@ -118,13 +116,11 @@ function scheduleAction(time, action) { // execute an action (lock,unlock,update
 }
 
 // Calculate startDate as today and endDate as 7 days from today
-const currentDate = new Date();
-const startDate = currentDate.toISOString().split('T')[0]; // format as YYYY-MM-DD
-const endDateNotFormated = new Date(currentDate);
-endDateNotFormated.setDate(endDateNotFormated.getDate() + 7); // add 7 days
-const endDate = endDateNotFormated.toISOString().split('T')[0]; // format as YYYY-MM-DD
-console.log(startDate, endDate);
+const date = new Date();
+//const currentDate = date.toISOString().split('T')[0]; // format as YYYY-MM-DD
+const currentDate = '2024-05-18';
+console.log(currentDate);
 
-for (const teamId of Object.values(TEAM_IDS)) {
-    scheduleMatchUpdates(teamId, startDate, endDate);
+for (const teamID of Object.values(TEAM_IDS)) {
+    scheduleMatchUpdates(teamID, currentDate);
 }
