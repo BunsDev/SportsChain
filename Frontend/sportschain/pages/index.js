@@ -1,11 +1,20 @@
 import { Box, Button, Flex, Heading, Image, Stack, Text, Link } from "@chakra-ui/react";
 import { useAuth } from "../context/authContext.js";
+import { useRouter } from "next/router";
+import { useEffect } from "react";
 
 export default function Home() {
   const { connect, disconnect, loggedIn } = useAuth();
+  const router = useRouter();
 
   // Ajoutez des logs pour vérifier l'état de loggedIn
   console.log('LoggedIn state:', loggedIn);
+
+  useEffect(() => {
+    if (loggedIn) {
+      router.push('/account'); // Remplacez '/dashboard' par l'URL de votre choix
+    }
+  }, [loggedIn]);
 
   return (
     <Box bg="black" color="white" minH="100vh">
@@ -38,7 +47,7 @@ export default function Home() {
         </Text>
         <Stack direction="row" spacing={8} justify="center">
           {loggedIn ? (
-            <Button colorScheme="red" size="lg" onClick={connect}>
+            <Button colorScheme="red" size="lg" onClick={disconnect}>
               Logout
             </Button>
           ) : (
