@@ -10,13 +10,16 @@ require('dotenv').config();
 const {
     SubscriptionManager,
     simulateScript,
+    SecretsManager,
     ResponseListener,
     ReturnType,
+    createGist,
+    deleteGist,
     decodeResult,
     FulfillmentCode,
   } = require("@chainlink/functions-toolkit");
 
-//const functionsConsumerAbi = "aeaze";
+const functionsConsumerAbi = require("../abi/token.json"); //ABI of the contract
 require("@chainlink/env-enc").config();
 
 const consumerAddress = "0xd2c8b79c75c9fab13533b95fd503758df928869a"; // REPLACE this with your Functions consumer address
@@ -122,7 +125,7 @@ const makeRequestAmoy = async (teamID = "701",currentDate = "2024-05-18") => {
     // Encrypt secrets
     const encryptedSecretsObj = await secretsManager.encryptSecrets(secrets);
 
-    console.log(`Creating gist...`);
+    console.log(`Creating gist...`); //✅
     const githubApiToken = process.env.GITHUB_API_TOKEN;
     if (!githubApiToken)
         throw new Error(
@@ -145,17 +148,18 @@ const makeRequestAmoy = async (teamID = "701",currentDate = "2024-05-18") => {
     signer
     );
 
+    console.log("gasLimit", gasLimit);
     // Actual transaction call
-    const transaction = await functionsConsumer.sendRequest(
-    source, // source
-    encryptedSecretsUrls, // user hosted secrets - encryptedSecretsUrls
-    0, // don hosted secrets - slot ID
-    0, // don hosted secrets - version 
-    args,
-    [], // bytesArgs - arguments can be encoded off-chain to bytes.
-    subscriptionId,
-    gasLimit,
-    ethers.utils.formatBytes32String(donId) // jobId is bytes32 representation of donId
+    const transaction = await functionsConsumer.requestGameData(
+        source, // source
+        encryptedSecretsUrls, // user hosted secrets - encryptedSecretsUrls
+        0, // don hosted secrets - slot ID
+        0, // don hosted secrets - version 
+        args,
+        [], // bytesArgs - arguments can be encoded off-chain to bytes.
+        subscriptionId,
+        gasLimit,
+        ethers.utils.formatBytes32String(donId) // jobId is bytes32 representation of donId
     );
 
     // Log transaction details
@@ -219,17 +223,21 @@ const makeRequestAmoy = async (teamID = "701",currentDate = "2024-05-18") => {
         if (errorString) {
         console.log(`\n❌ Error during the execution: `, errorString);
         } else {
-        const responseBytesHexstring = response.responseBytesHexstring;
-        if (ethers.utils.arrayify(responseBytesHexstring).length > 0) {
-            const decodedResponse = decodeResult(
-            response.responseBytesHexstring,
-            ReturnType.uint256
-            );
-            console.log(
-            `\n✅ Decoded response to ${ReturnType.uint256}: `,
-            decodedResponse
-            );
-        }
+            const responseBytesHexstring = response.responseBytesHexstring;
+            if (ethers.utils.arrayify(responseBytesHexstring).length > 0) {
+                const decodedResponse = decodeResult(
+                response.responseBytesHexstring,
+                ReturnType.uint256
+                );
+                console.log(
+                `\n✅ Decoded response to ${ReturnType.uint256}: `,
+                decodedResponse
+                );
+                // Delete gistURL - not needed anymore
+                console.log(`Delete gistUrl ${gistURL}`);
+                await deleteGist(githubApiToken, gistURL);
+                console.log(`\n✅ Gist ${gistURL} deleted`);
+            }
         }
     } catch (error) {
         console.error("Error listening for response:", error);
@@ -350,4 +358,7 @@ function getSportsData(){
     }
 }
 
-makeRequestAmoy()
+makeRequestAmoy().catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
