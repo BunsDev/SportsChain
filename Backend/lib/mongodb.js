@@ -1,9 +1,10 @@
-import mongoose from 'mongoose';
-import dotenv from 'dotenv';
+const mongoose = require('mongoose');
+const dotenv = require('dotenv');
 
 dotenv.config();
 
-const MONGODB_URI =process.env.MONGODB_URI;
+const MONGODB_URI="mongodb+srv://geraldquenum9:s0f4CFfTN2qRasJe@cluster0.53ny1d3.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+console.log(`Connecting to MongoDB at ${MONGODB_URI}`);
 
 if (!MONGODB_URI) {
   throw new Error(
@@ -24,15 +25,15 @@ async function dbConnect() {
 
   if (!cached.promise) {
     cached.promise = mongoose.connect(MONGODB_URI, {
-      autoIndex: false,
-      autoCreate: false,
-      compressors: []
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
     }).then((mongoose) => {
       return mongoose;
     });
   }
   cached.conn = await cached.promise;
+  console.log('Connected to MongoDB successfully');
   return cached.conn;
 }
 
-export default dbConnect;
+module.exports = dbConnect;
