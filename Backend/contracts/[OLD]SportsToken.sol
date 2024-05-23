@@ -71,7 +71,7 @@ contract SportsToken is ERC20, ChainlinkClient {
     // Buy tokens
     function buyTokens() external payable tradingNotBlocked{
         require(msg.value > 0, "You need Matic/AVAX to buy tokens");
-        uint256 amountToBuy = msg.value * getTokenPrice();
+        uint256 amountToBuy = msg.value / getTokenPrice();
         mint(msg.sender, amountToBuy);
     }
 
