@@ -30,7 +30,7 @@ const makeRequestAmoy = async (teamID = "701",currentDate = "2024-05-18") => {
     // hardcoded for Polygon Amoy
     const routerAddress = "0xC22a79eBA640940ABB6dF0f7982cc119578E11De";
     const linkTokenAddress = "0x326C977E6efc84E512bB9C30f76E30c160eD06FB";
-    const donId = "fun-polygon-amoy-1";
+    const donId = "fun-polygon-amoy-1"; //bytes32: 0x66756e2d706f6c79676f6e2d616d6f792d310000000000000000000000000000
     const explorerUrl = "https://www.oklink.com/amoy‍";
     // Initialize functions settings
     const source = fs.readFileSync(path.resolve(__dirname, "chainlink_function.js")).toString();
@@ -152,10 +152,7 @@ const makeRequestAmoy = async (teamID = "701",currentDate = "2024-05-18") => {
     const transaction = await functionsConsumer.requestGameData(
         source, // source
         encryptedSecretsUrls, // user hosted secrets - encryptedSecretsUrls
-        0, // don hosted secrets - slot ID
-        0, // don hosted secrets - version 
         args,
-        [], // bytesArgs - arguments can be encoded off-chain to bytes.
         subscriptionId,
         gasLimit,
         ethers.utils.formatBytes32String(donId) // jobId is bytes32 representation of donId
