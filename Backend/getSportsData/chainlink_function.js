@@ -60,7 +60,6 @@ for (const matchResult of teamMatchResults) { //if there is several matches in a
         teamName = matchResult.AwayTeamName
     }
 
-
     let winner = null;
     let loser = null;
     let draw = false;
@@ -137,10 +136,10 @@ for (const matchResult of teamMatchResults) { //if there is several matches in a
         homeTeam: homeTeam,
         awayTeam: awayTeam,
     };
-
         results[teamID] = results[teamID] || [];
         results[teamID].push(matchInfo);
 }
+
 // Format the match results into an adequate structure to be sent to the smart contract
 let formattedData = [];
 const teamMatches = results[teamID] || [];

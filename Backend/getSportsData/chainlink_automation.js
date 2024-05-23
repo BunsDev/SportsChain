@@ -32,9 +32,10 @@ const makeRequestAmoy = async (teamID = "701",currentDate = "2024-05-18") => {
     const linkTokenAddress = "0x326C977E6efc84E512bB9C30f76E30c160eD06FB";
     const donId = "fun-polygon-amoy-1"; //bytes32: 0x66756e2d706f6c79676f6e2d616d6f792d310000000000000000000000000000
     const explorerUrl = "https://www.oklink.com/amoy‍";
-    // Initialize functions settings
-    const source = fs.readFileSync(path.resolve(__dirname, "chainlink_function.js")).toString();
+    const gistURL = "https://gist.github.com/stormerino78/509fc6d430bd9c2db94cdc62700315b5"; // gist url of the chainlink_function.js code 
     
+    // Initialize functions settings
+    const source = gistURL;
     const args = [teamID,currentDate];
     const secrets = { apiKey: process.env.API_KEY };
     const gasLimit = 300000;
@@ -51,13 +52,11 @@ const makeRequestAmoy = async (teamID = "701",currentDate = "2024-05-18") => {
        throw new Error(`rpcUrl not provided  - check your environment variables`);
 
     const provider = new ethers.providers.JsonRpcProvider(rpcUrl);
-
     const wallet = new ethers.Wallet(privateKey);
     const signer = wallet.connect(provider); // create ethers signer for signing transactions
 
 
   ///////// START SIMULATION //////////// ✅
-
   console.log("Start simulation...");
   const response = await simulateScript({
     source: source,
@@ -132,13 +131,13 @@ const makeRequestAmoy = async (teamID = "701",currentDate = "2024-05-18") => {
     );
 
     // Create a new GitHub Gist to store the encrypted secrets
-    const gistURL = await createGist(
+    const gistURLsecret = await createGist(
         githubApiToken,
         JSON.stringify(encryptedSecretsObj)
     );
-    console.log(`\n✅Gist created ${gistURL} . Encrypt the URLs..`);
+    console.log(`\n✅Gist created ${gistURLsecret} . Encrypt the URLs..`);
     const encryptedSecretsUrls = await secretsManager.encryptSecretsUrls([
-        gistURL,
+        gistURLsecret,
     ]);
 
     const functionsConsumer = new ethers.Contract(
@@ -149,6 +148,14 @@ const makeRequestAmoy = async (teamID = "701",currentDate = "2024-05-18") => {
 
     console.log("gasLimit", gasLimit);
     // Actual transaction call
+    console.log("source",source);
+    console.log("encryptedSecretsUrls",encryptedSecretsUrls);
+    console.log("args", args);
+    console.log("subscriptionId", subscriptionId);
+    console.log("gasLimit", gasLimit);
+    console.log("donId", ethers.utils.formatBytes32String(donId));
+
+    /*
     const transaction = await functionsConsumer.requestGameData(
         source, // source
         encryptedSecretsUrls, // user hosted secrets - encryptedSecretsUrls
@@ -156,7 +163,7 @@ const makeRequestAmoy = async (teamID = "701",currentDate = "2024-05-18") => {
         subscriptionId,
         gasLimit,
         ethers.utils.formatBytes32String(donId) // jobId is bytes32 representation of donId
-    );
+    ); */
 
     // Log transaction details
     console.log(
@@ -230,9 +237,9 @@ const makeRequestAmoy = async (teamID = "701",currentDate = "2024-05-18") => {
                 decodedResponse
                 );
                 // Delete gistURL - not needed anymore
-                console.log(`Delete gistUrl ${gistURL}`);
-                await deleteGist(githubApiToken, gistURL);
-                console.log(`\n✅ Gist ${gistURL} deleted`);
+                console.log(`Delete gistUrl ${gistURLsecret}`);
+                await deleteGist(githubApiToken, gistURLsecret);
+                console.log(`\n✅ Gist ${gistURLsecret} deleted`);
             }
         }
     } catch (error) {

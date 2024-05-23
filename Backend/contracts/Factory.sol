@@ -136,15 +136,23 @@ contract TokenManager is FunctionsClient{
 
     // Chainlink request function
     function requestGameData(
-        string memory source,
-        bytes memory encryptedSecretsUrls,
-        string[] memory args,
-        uint64 subscriptionId,
-        uint32 gasLimit,
-        bytes32 donID
+        string memory gistURL,
+        bytes memory encryptedSecretsUrls, //0xd4bf4b2d3b49b4319cfd3c6e6f405e11038f515a09de1d3c2bead2bac297ff846af37664525c15dd1d2fd3e33b14afd756ae15e84d505af0ac8603f30782e0a6357d8692320e00dfa2d0081bbb78014b2f0e3b1f610379a7638e5cc31dbef2d1c7d451b0b7fa9c06efde8cc39b82c864c3c8bea3e8b19bfb311c29081aaed9d1822ef210895ba16ced91adcca20ab15fbb3c08df79aec1301c806db66638c568ef
+        string[] memory args, // ["701", "2024-05-18"]
+        uint64 subscriptionId, //224
+        uint32 gasLimit, //300000
+        bytes32 donID //0x66756e2d706f6c79676f6e2d616d6f792d310000000000000000000000000000
     ) external onlyOwner returns (bytes32 requestId) {
         FunctionsRequest.Request memory req;
-        req.initializeRequestForInlineJavaScript(source); // Initialize the request with JS code
+        req.initializeRequestForInlineJavaScript(string( //fetch js code from gist url
+                abi.encodePacked(
+                    "const response = await Functions.makeHttpRequest({",
+                    "url: '", gistURL, "'",
+                    "});",
+                    "return response.data;"
+                )
+            )
+        ); // Initialize the request with JS code
         if (encryptedSecretsUrls.length > 0)
             req.addSecretsReference(encryptedSecretsUrls); // Get the secret variables
         if (args.length > 0) req.setArgs(args); // Set the arguments for the request
