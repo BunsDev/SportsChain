@@ -1,0 +1,48 @@
+{
+    "initiators": [
+      {
+        "type": "web",
+        "params": {}
+      }
+    ],
+    "tasks": [
+      {
+        "type": "httpget",
+        "params": {
+          "get": "http://localhost:3000/api/match-results"
+        }
+      },
+      {
+        "type": "jsonparse",
+        "params": {
+          "path": ["result"]
+        }
+      },
+      {
+        "type": "ethuint256",
+        "params": {
+          "path": "result.home_win"
+        }
+      },
+      {
+        "type": "ethuint256",
+        "params": {
+          "path": "result.draw"
+        }
+      },
+      {
+        "type": "ethuint256",
+        "params": {
+          "path": "result.home_lose"
+        }
+      },
+      {
+        "type": "ethtx",
+        "params": {
+          "address": "YOUR_CONTRACT_ADDRESS",
+          "functionSelector": "fulfill(bytes32,uint256,uint256)"
+        }
+      }
+    ]
+  }
+  
