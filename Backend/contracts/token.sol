@@ -6,31 +6,32 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 
-contract token is ERC20, ERC20Burnable, ERC20Pausable, ERC20Permit {
+contract token is ERC20, ERC20Burnable, ERC20Pausable, AccessControl, ERC20Permit {
     address public owner;
+    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+
     constructor()
         ERC20("Paris", "PSGHG")
         ERC20Permit("Paris")
     {
         owner = msg.sender;
+        _grantRole(DEFAULT_ADMIN_ROLE, owner);
+        _grantRole(MINTER_ROLE, owner); // allow the smart contract manager to mint tokens
+        _mint(owner, 1 * 10 ** decimals());
         _mint(msg.sender, 1 * 10 ** decimals());
     }
 
-    modifier onlyOwner() {
-        require(msg.sender == owner, "Only owner can call this function");
-        _;
-    }
-
-    function pause() public onlyOwner {
+    function pause() public onlyRole(DEFAULT_ADMIN_ROLE) {
         _pause();
     }
 
-    function unpause() public onlyOwner {
+    function unpause() public onlyRole(DEFAULT_ADMIN_ROLE) {
         _unpause();
     }
 
-    function mint(address to, uint256 amount) public onlyOwner {
+    function mint(address to, uint256 amount) public onlyRole(MINTER_ROLE) {
         _mint(to, amount);
     }
 

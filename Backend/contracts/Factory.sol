@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "./token.sol"; // Import the token contract interface (or similar ERC20 interface)
+import "./token.sol"; // Import the token contract interface
 
 contract TokenManager {
     struct TokenInfo {
@@ -28,7 +28,7 @@ contract TokenManager {
         _;
     }
 
-    modifier tradingNotBlocked() { //affect the lock to the sell and buy functions
+    modifier tradingNotBlocked() { //lock the sell and buy functions during ongoing matches
         require(!tradingBlocked, "Trading is currently blocked");
         _;
     }
@@ -51,32 +51,38 @@ contract TokenManager {
         burn(addressFrom, amount);
     }
 
-    function addToken(uint256 teamID, token tokenAddress, uint256 initialPrice) public onlyOwner {
+    function addToken(uint256 teamID, token tokenAddress, uint256 initialPrice) public onlyOwner { // Add token to be managed by the contract
         tokens[teamID] = TokenInfo({
             token: tokenAddress,
             tokenPrice: initialPrice
         });
     }
 
-    function buyTokens(uint256 teamID) public payable tradingNotBlocked{
-        TokenInfo storage tokenInfo = tokens[teamID];
-        uint256 amountToBuy = msg.value / tokenInfo.tokenPrice;
-        require(amountToBuy > 0, "Not enough funds sent");
-        //mint(msg.sender, amountToBuy);
-        tokenInfo.token.transfer(msg.sender, amountToBuy);
-        emit Bought(msg.sender, teamID, amountToBuy);
-        mintTokens(teamID, amountToBuy);
+    function buyTokens(uint256 teamID) public payable tradingNotBlocked {
+    TokenInfo storage tokenInfo = tokens[teamID];
+    uint256 amountToBuy = msg.value / tokenInfo.tokenPrice;
+    require(amountToBuy > 0, "Not enough funds sent");
+    //mint(msg.sender, amountToBuy);
+    uint256 contractBalance = tokenInfo.token.balanceOf(address(this)); //check the number of token owned by the contract
+    if (amountToBuy > contractBalance) {
+        uint256 amountToMint = amountToBuy - contractBalance; // mint token if the contract doesn't have enough tokens
+        mintTokens(teamID, amountToMint);
     }
 
-    function sellTokens(uint256 teamID, uint256 amountToSell) public tradingNotBlocked{
+    tokenInfo.token.transfer(msg.sender, amountToBuy);
+    emit Bought(msg.sender, teamID, amountToBuy);
+}
+
+    function sellTokens(uint256 teamID, uint256 amountToSell) public tradingNotBlocked payable {
         TokenInfo storage tokenInfo = tokens[teamID];
         require(amountToSell > 0, "You need to sell at least some tokens");
+
         uint256 allowance = tokenInfo.token.allowance(msg.sender, address(this));
         require(allowance >= amountToSell, "Check the token allowance");
 
         tokenInfo.token.transferFrom(msg.sender, address(this), amountToSell);
-        //burn(msg.sender, amountToSell);
         payable(msg.sender).transfer(amountToSell * tokenInfo.tokenPrice);
+
         emit Sold(msg.sender, teamID, amountToSell);
     }
 
@@ -89,13 +95,14 @@ contract TokenManager {
         tokens[teamID].token.mint(address(this), amount);
     }
 
+    // calculate the new price depending of the odds and the result of the match
     function calculateNewPrice(uint256 teamID, uint256 odds, uint256 result) private view returns (uint256) {
         uint256 newPrice;
         uint256 currentPrice = tokens[teamID].tokenPrice;
         if (result == 1) { // Win
-            newPrice = currentPrice + (currentPrice * odds / 100);
+            newPrice = currentPrice + (currentPrice * odds / 10000); //odds are int (ex:223 for 2,23)
         } else if (result == 2) { // Lose
-            newPrice = currentPrice - (currentPrice * odds / 100);
+            newPrice = currentPrice - (currentPrice * odds / 10000);
         } else { // Draw
             newPrice = currentPrice;
         }
@@ -103,7 +110,7 @@ contract TokenManager {
     }
 
     function updatePrice(uint256 teamID, uint256 odds, uint256 result) public onlyOwner {
-        uint256 newPrice = calculateNewPrice(teamID, odds, result);
+        uint256 newPrice = calculateNewPrice(teamID, odds, result); //update price based on the calculated new price
         require(newPrice > 0, "New price must be greater than 0");
         uint256 oldPrice = tokens[teamID].tokenPrice;
         tokens[teamID].tokenPrice = newPrice;

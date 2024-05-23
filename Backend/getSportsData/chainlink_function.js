@@ -170,7 +170,7 @@ for (const match of teamMatches) {
             }
         }
         odds = parseFloat(odds) //convert into decimal number for calculation within the smart-contract
-
+        odds = odds * 100 //make it a int
         // Log the results into the console in a comprehensive way
         if (match.draw) {
             console.log(`${match.homeTeam} vs ${match.awayTeam} Match Result: ${match.winner} ended in a draw against ${match.loser}, Odds: ${odds}`);

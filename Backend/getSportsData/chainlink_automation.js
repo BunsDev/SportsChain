@@ -37,7 +37,6 @@ const makeRequestAmoy = async (teamID = "701",currentDate = "2024-05-18") => {
     
     const args = [teamID,currentDate];
     const secrets = { apiKey: process.env.API_KEY };
-    console.log('Secrets:', secrets);
     const gasLimit = 300000;
     
     // Initialize ethers signer and provider to interact with the contracts onchain
