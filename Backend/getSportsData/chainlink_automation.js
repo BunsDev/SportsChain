@@ -32,10 +32,9 @@ const makeRequestAmoy = async (teamID = "701",currentDate = "2024-05-18") => {
     const linkTokenAddress = "0x326C977E6efc84E512bB9C30f76E30c160eD06FB";
     const donId = "fun-polygon-amoy-1"; //bytes32: 0x66756e2d706f6c79676f6e2d616d6f792d310000000000000000000000000000
     const explorerUrl = "https://www.oklink.com/amoy‍";
-    const gistURL = "https://gist.github.com/stormerino78/509fc6d430bd9c2db94cdc62700315b5"; // gist url of the chainlink_function.js code 
-    
     // Initialize functions settings
-    const source = gistURL;
+    const source = fs.readFileSync(path.resolve(__dirname, "chainlink_function.js")).toString();
+    
     const args = [teamID,currentDate];
     const secrets = { apiKey: process.env.API_KEY };
     const gasLimit = 300000;
@@ -46,40 +45,36 @@ const makeRequestAmoy = async (teamID = "701",currentDate = "2024-05-18") => {
         throw new Error(
         "private key not provided - check your environment variables"
     );
-
     const rpcUrl = process.env.POLYGON_AMOY_RPC_URL;
     if (!rpcUrl)
        throw new Error(`rpcUrl not provided  - check your environment variables`);
-
     const provider = new ethers.providers.JsonRpcProvider(rpcUrl);
     const wallet = new ethers.Wallet(privateKey);
     const signer = wallet.connect(provider); // create ethers signer for signing transactions
 
-
-  ///////// START SIMULATION //////////// ✅
-  console.log("Start simulation...");
-  const response = await simulateScript({
-    source: source,
-    args: args,
-    bytesArgs: [], // bytesArgs - arguments can be encoded off-chain to bytes.
-    secrets: secrets,
-  });
-  console.log("Simulation result", response);
-  const errorString = response.errorString;
-  if (errorString) {
-    console.log(`❌ Error during simulation: `, errorString);
-  } else {
-    const returnType = ReturnType.uint256;
-    const responseBytesHexstring = response.responseBytesHexstring;
-    if (ethers.utils.arrayify(responseBytesHexstring).length > 0) {
-      const decodedResponse = decodeResult(
-        response.responseBytesHexstring,
-        returnType
-      );
-      console.log(`✅ Decoded response to ${returnType}: `, decodedResponse);
+    ///////// START SIMULATION //////////// ✅
+    console.log("Start simulation...");
+    const response = await simulateScript({
+        source: source,
+        args: args,
+        secrets: secrets,
+    });
+    console.log("Simulation result", response);
+    const errorString = response.errorString;
+    if (errorString) {
+        console.log(`❌ Error during simulation: `, errorString);
+    } else {
+        const returnType = ReturnType.uint256;
+        const responseBytesHexstring = response.responseBytesHexstring;
+        if (ethers.utils.arrayify(responseBytesHexstring).length > 0) {
+        const decodedResponse = decodeResult(
+            response.responseBytesHexstring,
+            returnType
+        );
+        console.log(`✅ Decoded response to ${returnType}: `, decodedResponse);
+        }
     }
-  }
-
+    
     //////// ESTIMATE REQUEST COSTS //////// ✅
     console.log("\nEstimate request costs...");
     // Initialize and return SubscriptionManager
@@ -89,64 +84,55 @@ const makeRequestAmoy = async (teamID = "701",currentDate = "2024-05-18") => {
     functionsRouterAddress: routerAddress,
     });
     await subscriptionManager.initialize();
-
     // estimate costs in Juels
-
     const gasPriceWei = await signer.getGasPrice(); // get gasPrice in wei
-
     const estimatedCostInJuels =
-    await subscriptionManager.estimateFunctionsRequestCost({
-        donId: donId, // ID of the DON to which the Functions request will be sent
-        subscriptionId: subscriptionId, // Subscription ID
-        callbackGasLimit: gasLimit, // Total gas used by the consumer contract's callback
-        gasPriceWei: BigInt(gasPriceWei), // Gas price in gWei
-    });
-
+        await subscriptionManager.estimateFunctionsRequestCost({
+            donId: donId, // ID of the DON to which the Functions request will be sent
+            subscriptionId: subscriptionId, // Subscription ID
+            callbackGasLimit: gasLimit, // Total gas used by the consumer contract's callback
+            gasPriceWei: BigInt(gasPriceWei), // Gas price in gWei
+        });
     console.log(
-    `Fulfillment cost estimated to ${ethers.utils.formatEther(
-        estimatedCostInJuels
-    )} LINK`
+        `Fulfillment cost estimated to ${ethers.utils.formatEther(
+            estimatedCostInJuels
+        )} LINK`
     );
 
     //////// MAKE REQUEST ////////
-
     console.log("\nMake request...");
-
     // First encrypt secrets and create a gist
     const secretsManager = new SecretsManager({
         signer: signer,
         functionsRouterAddress: routerAddress,
         donId: donId,
     });
-    await secretsManager.initialize();
 
+    await secretsManager.initialize();
     // Encrypt secrets
     const encryptedSecretsObj = await secretsManager.encryptSecrets(secrets);
-
     console.log(`Creating gist...`); //✅
     const githubApiToken = process.env.GITHUB_API_TOKEN;
     if (!githubApiToken)
         throw new Error(
         "githubApiToken not provided - check your environment variables"
     );
-
     // Create a new GitHub Gist to store the encrypted secrets
-    const gistURLsecret = await createGist(
+    const gistURL = await createGist(
         githubApiToken,
         JSON.stringify(encryptedSecretsObj)
     );
-    console.log(`\n✅Gist created ${gistURLsecret} . Encrypt the URLs..`);
+    console.log(`\n✅Gist created ${gistURL} . Encrypt the URLs..`);
     const encryptedSecretsUrls = await secretsManager.encryptSecretsUrls([
-        gistURLsecret,
+        gistURL,
     ]);
-
     const functionsConsumer = new ethers.Contract(
-    consumerAddress,
-    functionsConsumerAbi,
-    signer
+        consumerAddress,
+        functionsConsumerAbi,
+        signer
     );
-
     console.log("gasLimit", gasLimit);
+
     // Actual transaction call
     console.log("source",source);
     console.log("encryptedSecretsUrls",encryptedSecretsUrls);
@@ -155,7 +141,7 @@ const makeRequestAmoy = async (teamID = "701",currentDate = "2024-05-18") => {
     console.log("gasLimit", gasLimit);
     console.log("donId", ethers.utils.formatBytes32String(donId));
 
-    /*
+    
     const transaction = await functionsConsumer.requestGameData(
         source, // source
         encryptedSecretsUrls, // user hosted secrets - encryptedSecretsUrls
@@ -163,7 +149,7 @@ const makeRequestAmoy = async (teamID = "701",currentDate = "2024-05-18") => {
         subscriptionId,
         gasLimit,
         ethers.utils.formatBytes32String(donId) // jobId is bytes32 representation of donId
-    ); */
+    );
 
     // Log transaction details
     console.log(
