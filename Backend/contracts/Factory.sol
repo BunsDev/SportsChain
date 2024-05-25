@@ -21,6 +21,71 @@ contract TokenManager is FunctionsClient{
     bytes public s_lastResponse;
     bytes32 public s_lastRequestId;
     bytes public s_lastError;
+
+    //JS code:
+    string source = "const apiKey = secrets.apiKey; \
+if (!apiKey) { throw Error('API key required'); } \
+const teamID = parseInt(args[0], 10); \
+const date = args[1]; \
+const results = {}; \
+const getMatches = await Functions.makeHttpRequest({url: `https://api.sportsdata.io/v4/soccer/scores/json/SchedulesBasic/mls/2024?key=${apiKey}`}); \
+const matchResults = getMatches.data.filter(match => match.Day.startsWith(date)); \
+if (getMatches.error) { throw Error('Request Matches data failed'); } \
+const teamMatchResults = matchResults.filter(match => match.HomeTeamId === teamID || match.AwayTeamId === teamID); \
+if (teamMatchResults.length === 0) { throw Error(`No match results found for team ID: ${teamID}`); } \
+const getOdds = await Functions.makeHttpRequest({url:`https://api.sportsdata.io/v4/soccer/odds/json/GameOddsByDate/MLS/${date}?key=${apiKey}`}); \
+const oddsData = getOdds.data; \
+if (getOdds.error) { throw Error('Request Odds data failed'); } \
+let teamName = null; \
+for (const matchResult of teamMatchResults) { \
+const homeTeam = matchResult.HomeTeamName; \
+const awayTeam = matchResult.AwayTeamName; \
+const homeScore = matchResult.HomeTeamScore; \
+const awayScore = matchResult.AwayTeamScore; \
+const homePenaltyScore = matchResult.HomeTeamScorePenalty; \
+const awayPenaltyScore = matchResult.AwayTeamScorePenalty; \
+if (teamID === matchResult.HomeTeamId){ teamName = matchResult.HomeTeamName; } else if (teamID === matchResult.AwayTeamId){ teamName = matchResult.AwayTeamName; } \
+let winner = null; \
+let loser = null; \
+let draw = false; \
+if (homeScore !== null && awayScore !== null) { \
+if (homePenaltyScore == null && awayPenaltyScore == null){ \
+if (homeScore > awayScore) { winner = homeTeam; loser = awayTeam; } else if (homeScore < awayScore) { winner = awayTeam; loser = homeTeam; } else { winner = homeTeam; loser = awayTeam; draw = true; } \
+} else { \
+if (homePenaltyScore > awayPenaltyScore) { winner = homeTeam; loser = awayTeam; } else if (homePenaltyScore < awayPenaltyScore) { winner = awayTeam; loser = homeTeam; } \
+} \
+} else { console.log(`Match ${matchResult.GameId} result not yet received`); } \
+if (!winner) continue; \
+const matchOdds = { home_win: null, draw: null, home_lose: null }; \
+const gameOdds = oddsData.find(odds => odds.GameId === matchResult.GameId); \
+if (gameOdds && gameOdds.PregameOdds && gameOdds.PregameOdds.length > 0) { \
+const marketOdds = gameOdds.PregameOdds[0]; \
+if (marketOdds.HomeMoneyLine > 0) { matchOdds.home_win = (1 + (marketOdds.HomeMoneyLine / 100)).toFixed(2); } else { matchOdds.home_win = (1 + (100 / Math.abs(marketOdds.HomeMoneyLine))).toFixed(2); } \
+if (marketOdds.DrawMoneyLine > 0) { matchOdds.draw = (1 + (marketOdds.DrawMoneyLine / 100)).toFixed(2); } else { matchOdds.draw = (1 + (100 / Math.abs(marketOdds.DrawMoneyLine))).toFixed(2); } \
+if (marketOdds.AwayMoneyLine > 0) { matchOdds.home_lose = (1 + (marketOdds.AwayMoneyLine / 100)).toFixed(2); } else { matchOdds.home_lose = (1 + (100 / Math.abs(marketOdds.AwayMoneyLine))).toFixed(2); } \
+} \
+const matchInfo = { matchResultId: matchResult.GameId, winner, loser, draw, odds: matchOdds, HomeTeamId: matchResult.HomeTeamId, AwayTeamId: matchResult.AwayTeamId, homeTeam: homeTeam, awayTeam: awayTeam }; \
+results[teamID] = results[teamID] || []; \
+results[teamID].push(matchInfo); \
+} \
+let formattedData = []; \
+const teamMatches = results[teamID] || []; \
+for (const match of teamMatches) { \
+let formattedResult; \
+let odds; \
+if (match.draw === true) { formattedResult = 0; odds = match.odds.draw; } else { \
+if (teamID === match.HomeTeamId) { \
+if (match.winner === match.homeTeam) { formattedResult = 1; odds = match.odds.home_win; } else { formattedResult = 2; odds = match.odds.home_lose; } \
+} else if (teamID === match.AwayTeamId) { \
+if (match.winner === match.awayTeam) { formattedResult = 1; odds = match.odds.home_lose; } else { formattedResult = 2; odds = match.odds.home_win; } \
+} \
+odds = parseFloat(odds); \
+odds = odds * 100; \
+} \
+formattedData.push(teamID, formattedResult, odds); \
+} \
+return Functions.encodeString(JSON.stringify(formattedData));";
+
     // Store data from Chainlink
     struct GameData {
         uint256 result;
@@ -136,23 +201,15 @@ contract TokenManager is FunctionsClient{
 
     // Chainlink request function
     function requestGameData(
-        string memory gistURL,
-        bytes memory encryptedSecretsUrls, //0xd4bf4b2d3b49b4319cfd3c6e6f405e11038f515a09de1d3c2bead2bac297ff846af37664525c15dd1d2fd3e33b14afd756ae15e84d505af0ac8603f30782e0a6357d8692320e00dfa2d0081bbb78014b2f0e3b1f610379a7638e5cc31dbef2d1c7d451b0b7fa9c06efde8cc39b82c864c3c8bea3e8b19bfb311c29081aaed9d1822ef210895ba16ced91adcca20ab15fbb3c08df79aec1301c806db66638c568ef
+        //string memory source, // https://gist.github.com/stormerino78/509fc6d430bd9c2db94cdc62700315b5
+        bytes memory encryptedSecretsUrls, //0x4c857a8cebfef344b845f22aee2c4fbf02cf1150b1681b9c3ff358eddb0ab1e83e5edcad27727083bfabb27f398f6eed18fb5ee2926e4b13f75428eefbbab693edbfb8aeab386197a99ee956929135aa462cade10ce84088a0ab17e4faa1e56abe4b4bc52765ada6023ebb76f790153e10ac98b6f1aa92392d110fa11632a590fb0f2c4ef290ecd854732f27e327ef2795e926d54896693042950df76f35bd7161
         string[] memory args, // ["701", "2024-05-18"]
         uint64 subscriptionId, //224
         uint32 gasLimit, //300000
         bytes32 donID //0x66756e2d706f6c79676f6e2d616d6f792d310000000000000000000000000000
     ) external onlyOwner returns (bytes32 requestId) {
         FunctionsRequest.Request memory req;
-        req.initializeRequestForInlineJavaScript(string( //fetch js code from gist url
-                abi.encodePacked(
-                    "const response = await Functions.makeHttpRequest({",
-                    "url: '", gistURL, "'",
-                    "});",
-                    "return response.data;"
-                )
-            )
-        ); // Initialize the request with JS code
+        req.initializeRequestForInlineJavaScript(source); // Initialize the request with JS code
         if (encryptedSecretsUrls.length > 0)
             req.addSecretsReference(encryptedSecretsUrls); // Get the secret variables
         if (args.length > 0) req.setArgs(args); // Set the arguments for the request
