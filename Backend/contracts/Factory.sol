@@ -21,6 +21,15 @@ contract TokenManager is FunctionsClient{
     bytes public s_lastResponse;
     bytes32 public s_lastRequestId;
     bytes public s_lastError;
+    string public requestData;
+
+    // Event to log responses
+    event Response(
+        bytes32 indexed requestId,
+        string requestData,
+        bytes response,
+        bytes err
+    );
 
     //JS code:
     string source = "const apiKey = secrets.apiKey; \
@@ -195,7 +204,6 @@ return Functions.encodeString(JSON.stringify(formattedData));";
         require(newPrice > 0, "New price must be greater than 0");
         uint256 oldPrice = tokens[teamID].tokenPrice;
         tokens[teamID].tokenPrice = newPrice;
-
         emit PriceUpdated(teamID, oldPrice, newPrice);
     }
 
@@ -203,7 +211,7 @@ return Functions.encodeString(JSON.stringify(formattedData));";
     function requestGameData(
         //string memory source, // https://gist.github.com/stormerino78/509fc6d430bd9c2db94cdc62700315b5
         bytes memory encryptedSecretsUrls, //0x4c857a8cebfef344b845f22aee2c4fbf02cf1150b1681b9c3ff358eddb0ab1e83e5edcad27727083bfabb27f398f6eed18fb5ee2926e4b13f75428eefbbab693edbfb8aeab386197a99ee956929135aa462cade10ce84088a0ab17e4faa1e56abe4b4bc52765ada6023ebb76f790153e10ac98b6f1aa92392d110fa11632a590fb0f2c4ef290ecd854732f27e327ef2795e926d54896693042950df76f35bd7161
-        string[] memory args, // ["701", "2024-05-18"]
+        string[] memory args, // ["1", "2024-05-18"]
         uint64 subscriptionId, //224
         uint32 gasLimit, //300000
         bytes32 donID //0x66756e2d706f6c79676f6e2d616d6f792d310000000000000000000000000000
@@ -224,15 +232,20 @@ return Functions.encodeString(JSON.stringify(formattedData));";
         return s_lastRequestId;
     }
 
-    // Chainlink callback function
-    function fulfillRequest(bytes32 requestId, bytes memory response, bytes memory err) internal override {
+    function fulfillRequest(
+        bytes32 requestId,
+        bytes memory response,
+        bytes memory err
+    ) internal override {
         if (s_lastRequestId != requestId) {
             revert UnexpectedRequestID(requestId); // Check if request IDs match
         }
+        // Update the contract's state variables with the response and any errors
         s_lastResponse = response;
+        requestData = string(response);
         s_lastError = err;
-        (uint256 teamId, uint256 result, uint256 odds) = abi.decode(response, (uint256, uint256, uint256)); //decode the response to get the values
-        gameData[teamId] = GameData(result, odds);
-        emit Response(requestId, s_lastResponse, s_lastError);
+
+        // Emit an event to log the response
+        emit Response(requestId, requestData, s_lastResponse, s_lastError);
     }
 }
