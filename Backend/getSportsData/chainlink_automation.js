@@ -22,7 +22,7 @@ const {
 const functionsConsumerAbi = require("../abi/token.json"); //ABI of the contract
 require("@chainlink/env-enc").config();
 
-const consumerAddress = "0xd2c8b79c75c9fab13533b95fd503758df928869a"; // REPLACE this with your Functions consumer address
+const consumerAddress = "0x9e7de3b1026a27d55a7b100110adc4ae89e004ac"; // REPLACE this with your Functions consumer address
 const subscriptionId = 224; // REPLACE this with your subscription ID
 const apiKey = process.env.API_KEY;
 
@@ -134,12 +134,12 @@ const makeRequestAmoy = async (teamID = "701",currentDate = "2024-05-18") => {
     console.log("gasLimit", gasLimit);
 
     // Actual transaction call
-    console.log("source",source);
+    //console.log("source",source);
     console.log("encryptedSecretsUrls",encryptedSecretsUrls);
-    console.log("args", args);
-    console.log("subscriptionId", subscriptionId);
-    console.log("gasLimit", gasLimit);
-    console.log("donId", ethers.utils.formatBytes32String(donId));
+    //console.log("args", args);
+    //console.log("subscriptionId", subscriptionId);
+    //console.log("gasLimit", gasLimit);
+    //console.log("donId", ethers.utils.formatBytes32String(donId));
 
     
     const transaction = await functionsConsumer.requestGameData(
@@ -219,13 +219,13 @@ const makeRequestAmoy = async (teamID = "701",currentDate = "2024-05-18") => {
                 ReturnType.uint256
                 );
                 console.log(
-                `\n✅ Decoded response to ${ReturnType.uint256}: `,
+                `\n✅ Decoded response to ${ReturnType.string}: `,
                 decodedResponse
                 );
                 // Delete gistURL - not needed anymore
-                console.log(`Delete gistUrl ${gistURLsecret}`);
-                await deleteGist(githubApiToken, gistURLsecret);
-                console.log(`\n✅ Gist ${gistURLsecret} deleted`);
+                console.log(`Delete gistUrl ${gistURL}`);
+                await deleteGist(githubApiToken, gistURL);
+                console.log(`\n✅ Gist ${gistURL} deleted`);
             }
         }
     } catch (error) {

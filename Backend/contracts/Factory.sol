@@ -185,28 +185,6 @@ return Functions.encodeString(JSON.stringify(formattedData));";
         tokens[teamID].token.mint(address(this), amount);
     }
 
-    // calculate the new price depending of the odds and the result of the match
-    function calculateNewPrice(uint256 teamID, uint256 odds, uint256 result) private view returns (uint256) {
-        uint256 newPrice;
-        uint256 currentPrice = tokens[teamID].tokenPrice;
-        if (result == 1) { // Win
-            newPrice = currentPrice + (currentPrice * odds / 10000); //odds are int (ex:223 for 2,23)
-        } else if (result == 2) { // Lose
-            newPrice = currentPrice - (currentPrice * odds / 10000);
-        } else { // Draw
-            newPrice = currentPrice;
-        }
-        return newPrice;
-    }
-
-    function updatePrice(uint256 teamID, uint256 odds, uint256 result) public onlyOwner {
-        uint256 newPrice = calculateNewPrice(teamID, odds, result); //update price based on the calculated new price
-        require(newPrice > 0, "New price must be greater than 0");
-        uint256 oldPrice = tokens[teamID].tokenPrice;
-        tokens[teamID].tokenPrice = newPrice;
-        emit PriceUpdated(teamID, oldPrice, newPrice);
-    }
-
     // Chainlink request function
     function requestGameData(
         //string memory source, // https://gist.github.com/stormerino78/509fc6d430bd9c2db94cdc62700315b5
@@ -248,4 +226,29 @@ return Functions.encodeString(JSON.stringify(formattedData));";
         // Emit an event to log the response
         emit Response(requestId, requestData, s_lastResponse, s_lastError);
     }
+
+////////work until here//////
+
+    // calculate the new price depending of the odds and the result of the match
+    function calculateNewPrice(uint256 teamID, uint256 odds, uint256 result) private view returns (uint256) {
+        uint256 newPrice;
+        uint256 currentPrice = tokens[teamID].tokenPrice;
+        if (result == 1) { // Win
+            newPrice = currentPrice + (currentPrice * odds / 10000); //odds are int (ex:223 for 2,23)
+        } else if (result == 2) { // Lose
+            newPrice = currentPrice - (currentPrice * odds / 10000);
+        } else { // Draw
+            newPrice = currentPrice;
+        }
+        return newPrice;
+    }
+
+    function updatePrice(uint256 teamID, uint256 odds, uint256 result) public onlyOwner {
+        uint256 newPrice = calculateNewPrice(teamID, odds, result); //update price based on the calculated new price
+        require(newPrice > 0, "New price must be greater than 0");
+        uint256 oldPrice = tokens[teamID].tokenPrice;
+        tokens[teamID].tokenPrice = newPrice;
+        emit PriceUpdated(teamID, oldPrice, newPrice);
+    }
+
 }
