@@ -6,6 +6,32 @@ export default function Account() {
   const { user, disconnect } = useAuth();
   console.log('User:', user);
 
+  const handleTransaction = async () => {
+    const res = await fetch('/api/transactions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        userId: user.id,
+        teamId: selectedTeam.id,
+        amount: transactionAmount,
+      }),
+    });
+    const data = await res.json();
+    console.log(data);
+  };
+
+  const fetchTransactions = async () => {
+    const res = await fetch('/api/transactions');
+    const data = await res.json();
+    setTransactions(data.data);
+  };
+  
+  useEffect(() => {
+    fetchTransactions();
+  }, []);
+
   return (
     <Box bg="black" color="white" minH="100vh" p={4}>
       <Heading as="h1" size="2xl" mb={4}>
