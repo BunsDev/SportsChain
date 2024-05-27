@@ -19,19 +19,23 @@ const {
     FulfillmentCode,
   } = require("@chainlink/functions-toolkit");
 
-const functionsConsumerAbi = require("../abi/token.json"); //ABI of the contract
+const functionsConsumerAbi = require("../abi/token.json");
 require("@chainlink/env-enc").config();
 
-const consumerAddress = "0xb7302FD98D18e77C5CB52ec9D2CfE947E79f47b2"; // REPLACE this with your Functions consumer address
-const subscriptionId = 224; // REPLACE this with your subscription ID
+const consumerAddress = "0xb7302FD98D18e77C5CB52ec9D2CfE947E79f47b2";
+const subscriptionId = 224;
 const apiKey = process.env.API_KEY;
 
 const makeRequestAmoy = async (teamID = "701",currentDate = "2024-05-18") => {
+    // teamID (str): ID of the analysed team
+    // date (str): date of the analysed matche
+
     // hardcoded for Polygon Amoy
     const routerAddress = "0xC22a79eBA640940ABB6dF0f7982cc119578E11De";
     const linkTokenAddress = "0x326C977E6efc84E512bB9C30f76E30c160eD06FB";
-    const donId = "fun-polygon-amoy-1"; //bytes32: 0x66756e2d706f6c79676f6e2d616d6f792d310000000000000000000000000000
+    const donId = "fun-polygon-amoy-1";
     const explorerUrl = "https://www.oklink.com/amoy‍";
+
     // Initialize functions settings
     const source = fs.readFileSync(path.resolve(__dirname, "chainlink_function.js")).toString();
     
@@ -75,7 +79,7 @@ const makeRequestAmoy = async (teamID = "701",currentDate = "2024-05-18") => {
         }
     }
     
-    //////// ESTIMATE REQUEST COSTS //////// ✅
+    //////// ESTIMATE REQUEST COSTS //////// 
     console.log("\nEstimate request costs...");
     // Initialize and return SubscriptionManager
     const subscriptionManager = new SubscriptionManager({
@@ -88,10 +92,10 @@ const makeRequestAmoy = async (teamID = "701",currentDate = "2024-05-18") => {
     const gasPriceWei = await signer.getGasPrice(); // get gasPrice in wei
     const estimatedCostInJuels =
         await subscriptionManager.estimateFunctionsRequestCost({
-            donId: donId, // ID of the DON to which the Functions request will be sent
-            subscriptionId: subscriptionId, // Subscription ID
-            callbackGasLimit: gasLimit, // Total gas used by the consumer contract's callback
-            gasPriceWei: BigInt(gasPriceWei), // Gas price in gWei
+            donId: donId, 
+            subscriptionId: subscriptionId,
+            callbackGasLimit: gasLimit, 
+            gasPriceWei: BigInt(gasPriceWei),
         });
     console.log(
         `Fulfillment cost estimated to ${ethers.utils.formatEther(
@@ -141,9 +145,8 @@ const makeRequestAmoy = async (teamID = "701",currentDate = "2024-05-18") => {
     //console.log("gasLimit", gasLimit);
     //console.log("donId", ethers.utils.formatBytes32String(donId));
 
-    
     const transaction = await functionsConsumer.requestGameData(
-        source, // source
+        source, // source code of the chainlink function
         encryptedSecretsUrls, // user hosted secrets - encryptedSecretsUrls
         args,
         subscriptionId,
@@ -244,6 +247,7 @@ const makeRequestAmoy = async (teamID = "701",currentDate = "2024-05-18") => {
         console.error("Error listening for response:", error);
     }
 };
+
 /*
 makeRequestAmoy().catch((e) => {
     console.error(e);
@@ -267,12 +271,11 @@ const TEAM_IDS = {
 
 let scheduledActions = {}; // To keep track of scheduled actions
 
-async function fetchMatchResults(teamID, date) { 
-    //    team_IDs (dict): Sportmonk ID of the analysed team
+async function fetchmatchData(teamID, date) { 
+    //    team_IDs (dict): ID of the analysed teams
     //    date (str): date of the analysed matches
-
     const getMatches  = await axios.get(`https://api.sportsdata.io/v4/soccer/scores/json/SchedulesBasic/mls/2024?key=${apiKey}`);
-    const matchResults = getMatches.data.filter(match => {
+    const matchData = getMatches.data.filter(match => {
         // Handle case where DateTime is null
         if (match.DateTime === null && match.Day.startsWith(date)) {
             console.log(`Match ${match.GameId} does not have a DateTime for now.`);
@@ -283,21 +286,23 @@ async function fetchMatchResults(teamID, date) {
         }
     });
     
-    //console.log(JSON.stringify(matchResults, null ,2));
+    //console.log(JSON.stringify(matchData, null ,2));
 
     // Filter match results for the specified team and ensure that the team ID comparison is correct by explicitly converting it to a decimal int
-    const teamMatchResults = matchResults.filter(match => match.HomeTeamId === teamID  || match.AwayTeamId === teamID );
-    //console.log("Filtered match results:", JSON.stringify(teamMatchResults, null, 2));
-    return teamMatchResults;
+    const teammatchData = matchData.filter(match => match.HomeTeamId === teamID  || match.AwayTeamId === teamID );
+    //console.log("Filtered match results:", JSON.stringify(teammatchData, null, 2));
+    return teammatchData;
 }
 
 async function scheduleMatchUpdates(teamID, date) {
-    const matchResults = await fetchMatchResults(teamID, date); // Get all matches in the given date
+    //    team_IDs (dict): ID of the analysed teams
+    //    date (str): date of the analysed matches
+    const matchData = await fetchmatchData(teamID, date); // Get all matches in the given date
     
-    if (matchResults && matchResults.length > 0) {
-        for (const match of matchResults) { // Get data for each match
+    if (matchData && matchData.length > 0) {
+        for (const match of matchData) { // Get data for each match
             const matchId = match.GameId;
-            const startTime = new Date(match.DateTime).getTime();
+            const startTime = new Date(match.DateTime).getTime(); //UTC format
             const endTime = startTime + ((90 + 45) * 60 * 1000); // Assuming 90 + 45mins extra-time match time 
             const unblockingTime = endTime + (35 * 60 * 1000); // 35 minutes after the match ends (total of 2h10)
             
@@ -324,7 +329,7 @@ async function scheduleMatchUpdates(teamID, date) {
                 // Schedule updating token prices
                 update: scheduleAction(endTime, async () => {
                     console.log(`Updating token prices of ${teamID} for match ${matchId} at ${new Date(endTime)}`);
-                    await makeRequestAmoy(teamID,currentDate); //make the function request
+                    await makeRequestAmoy(teamID,currentDate); //make the chainlink function request
                 })
             };
         }
@@ -333,7 +338,10 @@ async function scheduleMatchUpdates(teamID, date) {
     }
 }
 
-function scheduleAction(time, action) { // execute an action (lock,unlock,update) at a particular time in the future
+// execute an action (lock,unlock,update) at a particular time in the future
+function scheduleAction(time, action) {
+    // time (int) : time when the action will be executed
+    // action (code) : Action to be executed
     const now = Date.now();
     const delay = time - now; // get in how much time the action will process
     if (delay > 0) {
@@ -348,7 +356,7 @@ function scheduleAction(time, action) { // execute an action (lock,unlock,update
 function getSportsData(){
     // Calculate startDate as today and endDate as 7 days from today
     const date = new Date();
-    const currentDate = date.toISOString().split('T')[0]; // format as YYYY-MM-DD
+    const currentDate = date.toISOString().split('T')[0]; // format as YYYY-MM-DD UTC
     //const currentDate = '2024-05-18';
     console.log(currentDate);
 
@@ -357,7 +365,4 @@ function getSportsData(){
     }
 }
 
-makeRequestAmoy().catch((e) => {
-    console.error(e);
-    process.exit(1);
-  });
+getSportsData()

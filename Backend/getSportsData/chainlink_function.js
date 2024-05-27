@@ -23,7 +23,6 @@ if (getMatches.error) {
 
 //console.log("Match Results IDs:", JSON.stringify(matchResults.map(match => ({ HomeTeamId: match.HomeTeamId, AwayTeamId: match.AwayTeamId })), null, 2));
 
-// Filter match results for the specified team
 // Ensure that the team ID comparison is correct by explicitly converting it to a decimal int
 const teamMatchResults = matchResults.filter(
     match => match.HomeTeamId === teamID  || match.AwayTeamId === teamID 
