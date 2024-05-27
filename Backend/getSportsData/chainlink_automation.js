@@ -5,6 +5,7 @@ const ethers = require('ethers');
 const axios = require('axios');
 const fs = require("fs");
 const path = require("path");
+const cron = require('node-cron'); //scheduling actions
 require('dotenv').config();
 
 const {
@@ -305,7 +306,7 @@ async function scheduleMatchUpdates(teamID, date) {
             const startTime = new Date(match.DateTime).getTime(); //UTC format
             const endTime = startTime + ((90 + 45) * 60 * 1000); // Assuming 90 + 45mins extra-time match time 
             const unblockingTime = endTime + (35 * 60 * 1000); // 35 minutes after the match ends (total of 2h10)
-            
+            console.log(`The team ${teamID} plays at ${new Date(startTime)}`);
             // If the match has been rescheduled, clear existing actions
             if (scheduledActions[matchId]) {
                 clearTimeout(scheduledActions[matchId].block);
@@ -334,18 +335,19 @@ async function scheduleMatchUpdates(teamID, date) {
             };
         }
     } else {
-        console.log(`Failed to fetch match results for ${teamID}`);
+        console.log(`The team ${teamID} doesn't play on the ${date}`);
     }
 }
 
-// execute an action (lock,unlock,update) at a particular time in the future
 function scheduleAction(time, action) {
     // time (int) : time when the action will be executed
     // action (code) : Action to be executed
     const now = Date.now();
     const delay = time - now; // get in how much time the action will process
     if (delay > 0) {
-        setTimeout(action, delay);
+        const timer = setTimeout(action, delay);
+        timer.unref(); // Allow the process to exit after scheduling the actions
+        return timer;
     } else {
         // If the time has already passed, execute the action immediately
         action();
@@ -356,8 +358,8 @@ function scheduleAction(time, action) {
 function getSportsData(){
     // Calculate startDate as today and endDate as 7 days from today
     const date = new Date();
-    const currentDate = date.toISOString().split('T')[0]; // format as YYYY-MM-DD UTC
-    //const currentDate = '2024-05-18';
+    //const currentDate = date.toISOString().split('T')[0]; // format as YYYY-MM-DD UTC
+    const currentDate = '2024-05-30';
     console.log(currentDate);
 
     for (const teamID of Object.values(TEAM_IDS)) {
@@ -365,4 +367,10 @@ function getSportsData(){
     }
 }
 
-getSportsData()
+// Schedule the getSportsData function to run every day at midnight
+cron.schedule('0 0 * * *', () => {
+    console.log('Getting matches schedule at midnight');
+    getSportsData();
+});
+
+console.log('Scheduled job set to run every day at midnight');
