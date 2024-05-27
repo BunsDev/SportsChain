@@ -22,7 +22,7 @@ const {
 const functionsConsumerAbi = require("../abi/token.json"); //ABI of the contract
 require("@chainlink/env-enc").config();
 
-const consumerAddress = "0x9e7de3b1026a27d55a7b100110adc4ae89e004ac"; // REPLACE this with your Functions consumer address
+const consumerAddress = "0xb7302FD98D18e77C5CB52ec9D2CfE947E79f47b2"; // REPLACE this with your Functions consumer address
 const subscriptionId = 224; // REPLACE this with your subscription ID
 const apiKey = process.env.API_KEY;
 
@@ -153,74 +153,86 @@ const makeRequestAmoy = async (teamID = "701",currentDate = "2024-05-18") => {
 
     // Log transaction details
     console.log(
-    `\n✅ Functions request sent! Transaction hash ${transaction.hash}. Waiting for a response...`
+        `\n✅ Functions request sent! Transaction hash ${transaction.hash}. Waiting for a response...`
     );
 
     console.log(
-    `See your request in the explorer ${explorerUrl}/tx/${transaction.hash}`
+        `See your request in the explorer ${explorerUrl}/tx/${transaction.hash}`
     );
 
     const responseListener = new ResponseListener({
-    provider: provider,
-    functionsRouterAddress: routerAddress,
+        provider: provider,
+        functionsRouterAddress: routerAddress,
     }); // Instantiate a ResponseListener object to wait for fulfillment.
-    (async () => {
     try {
         const response = await new Promise((resolve, reject) => {
-        responseListener
-            .listenForResponseFromTransaction(transaction.hash)
-            .then((response) => {
-            resolve(response); // Resolves once the request has been fulfilled.
-            })
-            .catch((error) => {
-            reject(error); // Indicate that an error occurred while waiting for fulfillment.
-            });
+            responseListener
+                .listenForResponseFromTransaction(transaction.hash)
+                .then((response) => {
+                    resolve(response); // Resolves once the request has been fulfilled.
+                })
+                .catch((error) => {
+                    reject(error); // Indicate that an error occurred while waiting for fulfillment.
+                });
         });
 
         const fulfillmentCode = response.fulfillmentCode;
 
         if (fulfillmentCode === FulfillmentCode.FULFILLED) {
-        console.log(
-            `\n✅ Request ${
-            response.requestId
-            } successfully fulfilled. Cost is ${ethers.utils.formatEther(
-            response.totalCostInJuels
-            )} LINK.Complete reponse: `,
-            response
-        );
+            console.log(
+                `\n✅ Request ${
+                    response.requestId
+                } successfully fulfilled. Cost is ${ethers.utils.formatEther(
+                    response.totalCostInJuels
+                )} LINK. Complete response: `,
+                response
+            );
+
+            // Process and update the price
+            const updatePrice = await functionsConsumer.processAndUpdatePrice(teamID);
+            console.log(
+                `\n✅ processAndUpdatePrice called! Transaction hash ${updatePrice.hash}. Waiting for confirmation...`
+            );
+            const receipt = await updatePrice.wait();
+            console.log(
+                `Transaction confirmed: ${receipt.confirmations}`
+            );
+            console.log(
+                `Updated price for teamID ${teamID} is ${await functionsConsumer.getTokenPrice(teamID)}`
+            );
         } else if (fulfillmentCode === FulfillmentCode.USER_CALLBACK_ERROR) {
-        console.log(
-            `\n⚠️ Request ${
-            response.requestId
-            } fulfilled. However, the consumer contract callback failed. Cost is ${ethers.utils.formatEther(
-            response.totalCostInJuels
-            )} LINK.Complete reponse: `,
-            response
-        );
+            console.log(
+                `\n⚠️ Request ${
+                    response.requestId
+                } fulfilled. However, the consumer contract callback failed. Cost is ${ethers.utils.formatEther(
+                    response.totalCostInJuels
+                )} LINK. Complete response: `,
+                response
+            );
         } else {
-        console.log(
-            `\n❌ Request ${
-            response.requestId
-            } not fulfilled. Code: ${fulfillmentCode}. Cost is ${ethers.utils.formatEther(
-            response.totalCostInJuels
-            )} LINK.Complete reponse: `,
-            response
-        );
+            console.log(
+                `\n❌ Request ${
+                    response.requestId
+                } not fulfilled. Code: ${fulfillmentCode}. Cost is ${ethers.utils.formatEther(
+                    response.totalCostInJuels
+                )} LINK. Complete response: `,
+                response
+            );
         }
 
         const errorString = response.errorString;
         if (errorString) {
-        console.log(`\n❌ Error during the execution: `, errorString);
+            console.log(`\n❌ Error during the execution: `, errorString);
         } else {
             const responseBytesHexstring = response.responseBytesHexstring;
             if (ethers.utils.arrayify(responseBytesHexstring).length > 0) {
                 const decodedResponse = decodeResult(
-                response.responseBytesHexstring,
-                ReturnType.uint256
+                    response.responseBytesHexstring,
+                    ReturnType.string
                 );
                 console.log(
-                `\n✅ Decoded response to ${ReturnType.string}: `,
-                decodedResponse
+                    `\n✅ Decoded response to ${ReturnType.string}: `,
+                    decodedResponse
                 );
                 // Delete gistURL - not needed anymore
                 console.log(`Delete gistUrl ${gistURL}`);
@@ -231,9 +243,7 @@ const makeRequestAmoy = async (teamID = "701",currentDate = "2024-05-18") => {
     } catch (error) {
         console.error("Error listening for response:", error);
     }
-    })();
 };
-
 /*
 makeRequestAmoy().catch((e) => {
     console.error(e);
