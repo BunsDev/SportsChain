@@ -105,8 +105,11 @@ export const AuthProvider = ({ children }) => {
       }
       console.log("Getting user info...");
       const user = await web3auth.getUserInfo();
+      const provider = new ethers.providers.Web3Provider(web3auth.provider);
+      const signer = provider.getSigner();
+      const publicKey = await signer.getAddress();  // Obtient la clé publique
       console.log("User info:", user);
-      return user;
+      return { ...user, publicKey };  // Ajoute la clé publique à l'objet utilisateur
     } catch (error) {
       console.error("Error getting user info:", error);
       return null;

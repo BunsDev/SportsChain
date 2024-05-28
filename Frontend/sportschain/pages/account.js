@@ -51,6 +51,7 @@ export default function Account() {
             <VStack align="start">
               <Text fontSize="xl">Name: {user.name}</Text>
               <Text fontSize="xl">Email: {user.email}</Text>
+              <Text fontSize="xl">Public Key: {user.publicKey}</Text> {/* Affichage de la clé publique */}
             </VStack>
           </HStack>
           <Box bg="gray.800" p={4} borderRadius="md" w="full">
