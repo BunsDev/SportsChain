@@ -121,7 +121,6 @@ export default function Teams() {
               <Box>
                 <Image src={logoSrc} alt={`${team.name} logo`} boxSize="100px" mx="auto" mb={4} />
                 <Text fontSize="xl" fontWeight="bold">{team.name}</Text>
-                <Text fontSize="md">{team.areaId}</Text>
               </Box>
               <HStack mt={4} justify="center">
                 <Button colorScheme="green" size="sm" onClick={() => handleBuy(team)}>Buy</Button>
