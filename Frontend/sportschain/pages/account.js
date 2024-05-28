@@ -1,10 +1,12 @@
 import { Box, Button, Heading, Text, Image, VStack, HStack, Flex } from "@chakra-ui/react";
 import { useAuth } from "../context/authContext";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/router";
 
 export default function Account() {
   const { user, disconnect } = useAuth();
   const [tokenBalance, setTokenBalance] = useState(0);
+  const router = useRouter();
 
   useEffect(() => {
     const fetchTokenBalance = async () => {
@@ -24,6 +26,10 @@ export default function Account() {
 
     fetchTokenBalance();
   }, [user]);
+
+  const handleTradeTokens = () => {
+    router.push('/teams');
+  };
 
   return (
     <Box bg="gray.900" color="white" minH="100vh" p={4}>
@@ -58,6 +64,9 @@ export default function Account() {
             <Text fontSize="xl" mb={2}>Token Balance</Text>
             <Text fontSize="2xl" fontWeight="bold">{tokenBalance} TTK</Text>
           </Box>
+          <Button colorScheme="blue" size="lg" onClick={handleTradeTokens}>
+            Trade Tokens
+          </Button>
         </VStack>
       ) : (
         <Text fontSize="xl">Loading...</Text>
