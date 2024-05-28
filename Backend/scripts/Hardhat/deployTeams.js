@@ -9,8 +9,26 @@ async function main() {
   console.log("Deploying contracts with the account:", deployer.address);
 
   const teams = [
-    { name: 'Paris', symbol: 'PSGHG' },
-    // Ajoutez d'autres équipes ici
+    { name: 'Paris Saint-Germain FC', symbol: 'PSG' },
+    { name: 'Olympique Lyonnais', symbol: 'OL' },
+    { name: 'Olympique de Marseille', symbol: 'OM' },
+    { name: 'AS Monaco FC', symbol: 'ASM' },
+    { name: 'Lille OSC', symbol: 'LOSC' },
+    { name: 'OGC Nice', symbol: 'OGCN' },
+    { name: 'Stade Rennais FC', symbol: 'SRFC' },
+    { name: 'RC Strasbourg Alsace', symbol: 'RCSA' },
+    { name: 'FC Nantes', symbol: 'FCN' },
+    { name: 'Montpellier HSC', symbol: 'MHSC' },
+    { name: 'Stade Brestois 29', symbol: 'SB29' },
+    { name: 'Girondins de Bordeaux', symbol: 'GB' },
+    { name: 'AS Saint-Étienne', symbol: 'ASSE' },
+    { name: 'FC Metz', symbol: 'FCM' },
+    { name: 'Stade de Reims', symbol: 'SDR' },
+    { name: 'Angers SCO', symbol: 'SCO' },
+    { name: 'Toulouse FC', symbol: 'TFC' },
+    { name: 'Clermont Foot', symbol: 'CF63' },
+    { name: 'ESTAC Troyes', symbol: 'ESTAC' },
+    { name: 'FC Lorient', symbol: 'FCL' }
   ];
 
   let deployedTeams = [];
@@ -22,14 +40,14 @@ async function main() {
   for (const team of teams) {
     const TeamToken = await ethers.getContractFactory("Token");
     const teamToken = await TeamToken.deploy(team.name, team.symbol);
-    await teamToken.deployed();
+    await teamToken.waitForDeployment();
 
-    console.log(`${team.name} Token deployed to:`, teamToken.address);
+    console.log(`${team.name} Token deployed to:`, teamToken.target);
 
     deployedTeams.push({
       name: team.name,
       symbol: team.symbol,
-      tokenAddress: teamToken.address
+      tokenAddress: teamToken.target
     });
   }
 
