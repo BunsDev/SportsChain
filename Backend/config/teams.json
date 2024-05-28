@@ -1,0 +1,10 @@
+[
+    {
+      "name": "Paris",
+      "tokenAddress": "0xYourTokenAddressForParis"
+    },
+    {
+      "name": "Another Team",
+      "tokenAddress": "0xYourTokenAddressForAnotherTeam"
+    }
+  ]
