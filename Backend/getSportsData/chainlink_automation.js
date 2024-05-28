@@ -23,13 +23,20 @@ const {
 const functionsConsumerAbi = require("../abi/token.json");
 require("@chainlink/env-enc").config();
 
-const consumerAddress = "0xb7302FD98D18e77C5CB52ec9D2CfE947E79f47b2";
+const consumerAddress = "0x3d45A71c5B86eB3f175Fab1016537eb39f1Cd8b9";
 const subscriptionId = 224;
 const apiKey = process.env.API_KEY;
 
-const makeRequestAmoy = async (teamID = "701",currentDate = "2024-05-18") => {
+// Initialize ethers signer and provider to interact with the contracts onchain
+const rpcUrl = process.env.POLYGON_AMOY_RPC_URL;
+const provider = new ethers.providers.JsonRpcProvider(rpcUrl);
+const privateKey = process.env.PRIVATE_KEY; // fetch PRIVATE_KEY
+const wallet = new ethers.Wallet(privateKey);
+const signer = wallet.connect(provider); // create ethers signer for signing transactions
+
+const makeRequestAmoy = async (teamID = "697", currentDate = "2024-05-18") => {
     // teamID (str): ID of the analysed team
-    // date (str): date of the analysed matche
+    // currentDate (str): date of the analysed match
 
     // hardcoded for Polygon Amoy
     const routerAddress = "0xC22a79eBA640940ABB6dF0f7982cc119578E11De";
@@ -44,21 +51,16 @@ const makeRequestAmoy = async (teamID = "701",currentDate = "2024-05-18") => {
     const secrets = { apiKey: process.env.API_KEY };
     const gasLimit = 300000;
     
-    // Initialize ethers signer and provider to interact with the contracts onchain
-    const privateKey = process.env.PRIVATE_KEY; // fetch PRIVATE_KEY
     if (!privateKey)
         throw new Error(
         "private key not provided - check your environment variables"
     );
-    const rpcUrl = process.env.POLYGON_AMOY_RPC_URL;
     if (!rpcUrl)
        throw new Error(`rpcUrl not provided  - check your environment variables`);
-    const provider = new ethers.providers.JsonRpcProvider(rpcUrl);
-    const wallet = new ethers.Wallet(privateKey);
-    const signer = wallet.connect(provider); // create ethers signer for signing transactions
 
     ///////// START SIMULATION //////////// ✅
     console.log("Start simulation...");
+    console.log(args);
     const response = await simulateScript({
         source: source,
         args: args,
@@ -249,28 +251,32 @@ const makeRequestAmoy = async (teamID = "701",currentDate = "2024-05-18") => {
     }
 };
 
-/*
+
 makeRequestAmoy().catch((e) => {
     console.error(e);
     process.exit(1);
 });
-*/
+
 
 /////// Automation CODE ////////
 
+//Initial price: 1000000 wei
+
 const TEAM_IDS = {
-    'Chicago Fire FC': 694,
-    'Colorado Rapids SC': 695,
-    'Columbus Crew': 696,
-    'D.C. United SC': 697,
-    'FC Dallas': 698,
-    'Houston Dynamo': 699,
-    'Los Angeles Galaxy': 700,
-    'CF Montréal': 701,
-    'New England Revolution': 702
+    'Chicago Fire FC': 694, //CHI token address : 0xAf8aFdE09d1Ab9a7b5F4B1378C07725481d028fe
+    'Colorado Rapids SC': 695, //COL token address : 0x84348cE503b80C1B1B1CF310932731307663c78f
+    'Columbus Crew': 696, //CLB token address : 0x9F0C3f7Ee61d1c76909f58C8e53c7F9943c1d897
+    'D.C. United SC': 697, //DCU token address : 0x9f30159ff2c449bb7400F4eD6601555D92121e56
+    'FC Dallas': 698, //DAL token address : 0xe8B6CABd282Ffecd0b0aC22153E0c2413498406e
+    'Houston Dynamo': 699, //HOU token address : 0xF2b4056b1cF5b6C3ad8777A9546f219bb8A27d1E
+    'Los Angeles Galaxy': 700, //LAG token address : 0x71f9B41059144C77BDF43013168bdD7E0ca69B4c
+    'CF Montréal': 701, // MIM token address : 0x4D0bebfAD65739326FD13CF86d5E6E8240fD88f4
+    'New England Revolution': 702 //NER token address : 0xC87Cf64A56cb3dbF10B8d8293857718EBe543C34
 };
 
-let scheduledActions = {}; // To keep track of scheduled actions
+let actionQueue = []; // Queue to store actions
+let isProcessing = false; // Flag to indicate if the queue is being processed
+let scheduledActions = {};
 
 async function fetchmatchData(teamID, date) { 
     //    team_IDs (dict): ID of the analysed teams
@@ -299,6 +305,11 @@ async function scheduleMatchUpdates(teamID, date) {
     //    team_IDs (dict): ID of the analysed teams
     //    date (str): date of the analysed matches
     const matchData = await fetchmatchData(teamID, date); // Get all matches in the given date
+    const contract = new ethers.Contract(
+        consumerAddress,
+        functionsConsumerAbi,
+        signer
+    );
     
     if (matchData && matchData.length > 0) {
         for (const match of matchData) { // Get data for each match
@@ -314,25 +325,26 @@ async function scheduleMatchUpdates(teamID, date) {
                 clearTimeout(scheduledActions[matchId].update);
             }
 
+            scheduledActions[matchId] = {};
+
             // Storing the Schedule actions of locking/unlocking/updating
-            scheduledActions[matchId] = {
-                block: scheduleAction(startTime, async () => {
-                    console.log(`Blocking trading for match ${matchId} at ${new Date(startTime)}`);
-                    await contract.blockTrading();
-                }),
+            scheduledActions[matchId].block = scheduleAction(startTime, async () => {
+                console.log(`Blocking trading for match ${matchId} at ${new Date(startTime)}`);
+                await contract.blockTrading();
+                processNextAction();
+            });
 
-                // Schedule unblocking trading
-                unblock: scheduleAction(unblockingTime, async () => {
-                    console.log(`Unblocking trading for match ${matchId} at ${new Date(unblockingTime)}`);
-                    await contract.unblockTrading();
-                }),
+            scheduledActions[matchId].unblock = scheduleAction(unblockingTime, async () => {
+                console.log(`Unblocking trading for match ${matchId} at ${new Date(unblockingTime)}`);
+                await contract.unblockTrading();
+                processNextAction();
+            });
 
-                // Schedule updating token prices
-                update: scheduleAction(endTime, async () => {
-                    console.log(`Updating token prices of ${teamID} for match ${matchId} at ${new Date(endTime)}`);
-                    await makeRequestAmoy(teamID,currentDate); //make the chainlink function request
-                })
-            };
+            scheduledActions[matchId].update = scheduleAction(endTime, async () => {
+                console.log(`Updating token prices of ${teamID} for match ${matchId} at ${new Date(endTime)}`);
+                await makeRequestAmoy(String(teamID), date);
+                processNextAction();
+            });
         }
     } else {
         console.log(`The team ${teamID} doesn't play on the ${date}`);
@@ -340,18 +352,30 @@ async function scheduleMatchUpdates(teamID, date) {
 }
 
 function scheduleAction(time, action) {
-    // time (int) : time when the action will be executed
-    // action (code) : Action to be executed
+    actionQueue.push({ time, action });
+    processNextAction();
+}
+
+function processNextAction() {
+    if (isProcessing || actionQueue.length === 0) {
+        return;
+    }
+    const nextAction = actionQueue.shift();
     const now = Date.now();
-    const delay = time - now; // get in how much time the action will process
+    const delay = nextAction.time - now;
+    isProcessing = true;
     if (delay > 0) {
-        const timer = setTimeout(action, delay);
-        timer.unref(); // Allow the process to exit after scheduling the actions
-        return timer;
+        setTimeout(async () => {
+            await nextAction.action();
+            isProcessing = false;
+            processNextAction();
+        }, delay);
     } else {
-        // If the time has already passed, execute the action immediately
-        action();
-        return null;
+        (async () => {
+            await nextAction.action();
+            isProcessing = false;
+            processNextAction();
+        })();
     }
 }
 
@@ -359,7 +383,7 @@ function getSportsData(){
     // Calculate startDate as today and endDate as 7 days from today
     const date = new Date();
     //const currentDate = date.toISOString().split('T')[0]; // format as YYYY-MM-DD UTC
-    const currentDate = '2024-05-30';
+    const currentDate = '2024-05-19';
     console.log(currentDate);
 
     for (const teamID of Object.values(TEAM_IDS)) {
@@ -367,10 +391,12 @@ function getSportsData(){
     }
 }
 
+/*
 // Schedule the getSportsData function to run every day at midnight
 cron.schedule('0 0 * * *', () => {
     console.log('Getting matches schedule at midnight');
     getSportsData();
 });
-
 console.log('Scheduled job set to run every day at midnight');
+*/
+//getSportsData()

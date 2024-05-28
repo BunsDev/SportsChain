@@ -179,9 +179,10 @@ contract TokenManager is FunctionsClient{
         uint256 newPrice = calculateNewPrice(teamID, odds, result); //update price based on the calculated new price
         require(newPrice > 0, "New price must be greater than 0");
         uint256 oldPrice = tokens[teamID].tokenPrice;
-        require(newPrice != oldPrice, "Draw between the two teams, the price stays the same");
-        tokens[teamID].tokenPrice = newPrice;
-        emit PriceUpdated(teamID, oldPrice, newPrice);
+        if(newPrice != oldPrice) {
+            tokens[teamID].tokenPrice = newPrice;
+            emit PriceUpdated(teamID, oldPrice, newPrice);
+        }
     }
 
     function getTokenPrice(uint256 teamID) public view returns(uint256){
@@ -219,16 +220,21 @@ contract TokenManager is FunctionsClient{
                 inNumber = true;
             } else {
                 if (inNumber) {
-                    numbers[numIndex] = currentNumber;
-                    numIndex++;
+                    if (numIndex < 3) {
+                        numbers[numIndex] = currentNumber;
+                        numIndex++;
+                    }
                     currentNumber = 0;
                     inNumber = false;
                 }
             }
         }
-        if (inNumber) {
+        // Handle the last number in the string if it ends with a number
+        if (inNumber && numIndex < 3) {
             numbers[numIndex] = currentNumber;
+            numIndex++;
         }
+        require(numIndex == 3, "parseString: Incorrect number of elements parsed");
         return (numbers[0], numbers[1], numbers[2]);
     }
 }
