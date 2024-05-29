@@ -1,0 +1,102 @@
+[
+  {
+    "name": "Paris Saint-Germain FC",
+    "symbol": "PSG",
+    "tokenAddress": "0x83D18a9044D8b53363606C0c06f97E20C20F565C"
+  },
+  {
+    "name": "Olympique Lyonnais",
+    "symbol": "OL",
+    "tokenAddress": "0xC0D4835806942cDfEcBb01173b6eE9f52a48EB83"
+  },
+  {
+    "name": "Olympique de Marseille",
+    "symbol": "OM",
+    "tokenAddress": "0x6E84238b3C1cA371Ca55D602E7f97ECA89d9252C"
+  },
+  {
+    "name": "AS Monaco FC",
+    "symbol": "ASM",
+    "tokenAddress": "0x44978Da02ef214ac791F011fbdBEFfFD154b2F42"
+  },
+  {
+    "name": "Lille OSC",
+    "symbol": "LOSC",
+    "tokenAddress": "0x9c41D479DfC7D1f4a20684dA61FCb23395F68109"
+  },
+  {
+    "name": "OGC Nice",
+    "symbol": "OGCN",
+    "tokenAddress": "0x1b9a05cadF513FaD19aa12d06606239aD1e5E848"
+  },
+  {
+    "name": "Stade Rennais FC 1901",
+    "symbol": "SRFC",
+    "tokenAddress": "0xCdEC7a5cf05bd370F170341f70Ce9cA9EB344De2"
+  },
+  {
+    "name": "RC Strasbourg Alsace",
+    "symbol": "RCSA",
+    "tokenAddress": "0x62614F4FF3A035641036888339B3897015977084"
+  },
+  {
+    "name": "FC Nantes",
+    "symbol": "FCN",
+    "tokenAddress": "0x701A1bF7c993BcCfd7Af496Eb16798181141bA1E"
+  },
+  {
+    "name": "Montpellier HSC",
+    "symbol": "MHSC",
+    "tokenAddress": "0x2a298Cd0c40C4E71BD6308151AA3437A0E8EC648"
+  },
+  {
+    "name": "Stade Brestois 29",
+    "symbol": "SB29",
+    "tokenAddress": "0x4f1CB18C89A9018dC22aF6cF54F2ea6EE9A0A2DF"
+  },
+  {
+    "name": "Girondins de Bordeaux",
+    "symbol": "GB",
+    "tokenAddress": "0x9C2a0562b395E09b81265C568B55D164230a0939"
+  },
+  {
+    "name": "AS Saint-Étienne",
+    "symbol": "ASSE",
+    "tokenAddress": "0x1C04407DB9968D7BeE840c699002F82D10EbaC35"
+  },
+  {
+    "name": "FC Metz",
+    "symbol": "FCM",
+    "tokenAddress": "0x5BCa26B02c1C8a7420377791D9Ddb17094f0C49b"
+  },
+  {
+    "name": "Stade de Reims",
+    "symbol": "SDR",
+    "tokenAddress": "0xF3dFcfeB0660b4734F260950f68cF5Fad9b4519A"
+  },
+  {
+    "name": "Angers SCO",
+    "symbol": "SCO",
+    "tokenAddress": "0x1fd73e2D8738564Bf37621250A2b7C365b557a66"
+  },
+  {
+    "name": "Toulouse FC",
+    "symbol": "TFC",
+    "tokenAddress": "0xd65A773DA1e00d6889eA531aEb115789F5776295"
+  },
+  {
+    "name": "Clermont Foot",
+    "symbol": "CF63",
+    "tokenAddress": "0xc704719Ee3a97322EFE7fcB4c71C1145141596d4"
+  },
+  {
+    "name": "ESTAC Troyes",
+    "symbol": "ESTAC",
+    "tokenAddress": "0x7F8A9e6E826965199dBBf431185EFDd4d6E13ceC"
+  },
+  {
+    "name": "FC Lorient",
+    "symbol": "FCL",
+    "tokenAddress": "0x7D585C6757480e3D69810F410B5026E7CB3eF258"
+  }
+]

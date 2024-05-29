@@ -24,16 +24,15 @@ const privateKeyProvider = new EthereumPrivateKeyProvider({
 });
 
 const web3auth = new Web3Auth({
-    clientId,
-    web3AuthNetwork: WEB3AUTH_NETWORK.SAPPHIRE_DEVNET,
-    privateKeyProvider: privateKeyProvider,
-  });
+  clientId,
+  web3AuthNetwork: WEB3AUTH_NETWORK.SAPPHIRE_DEVNET,
+  privateKeyProvider: privateKeyProvider,
+});
 
 export const AuthProvider = ({ children }) => {
   const [provider, setProvider] = useState(null);
   const [loggedIn, setLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
-
 
   useEffect(() => {
     const init = async () => {
@@ -42,8 +41,14 @@ export const AuthProvider = ({ children }) => {
         await web3auth.initModal();
         console.log("Web3Auth initialized");
         if (web3auth.provider) {
-          setProvider(new ethers.providers.Web3Provider(web3auth.provider));
-          console.log("Provider set during initialization");
+          const ethersProvider = new ethers.providers.Web3Provider(web3auth.provider);
+          setProvider(ethersProvider);
+          setLoggedIn(true);
+          const userInfo = await web3auth.getUserInfo();
+          const signer = ethersProvider.getSigner();
+          const publicKey = await signer.getAddress();
+          setUser({ ...userInfo, publicKey });
+          console.log("User info set during initialization:", { ...userInfo, publicKey });
         }
       } catch (error) {
         console.error("Error initializing Web3Auth:", error);
@@ -53,26 +58,20 @@ export const AuthProvider = ({ children }) => {
     init();
   }, []);
 
-  useEffect(() => {
-    if (loggedIn) {
-      getUserInfo().then((user) => {
-        setUser(user);
-        console.log("User info set:", user);
-      });
-    } else {
-      setUser(null);
-      console.log("User logged out, user info cleared");
-    }
-  }, [loggedIn]);
-
   const connect = async () => {
     try {
       console.log("Connecting...");
       await web3auth.connect();
       console.log("Web3Auth connected");
       if (web3auth.provider) {
+        const ethersProvider = new ethers.providers.Web3Provider(web3auth.provider);
+        setProvider(ethersProvider);
         setLoggedIn(true);
-        console.log("Provider set after connection and user logged in");
+        const userInfo = await web3auth.getUserInfo();
+        const signer = ethersProvider.getSigner();
+        const publicKey = await signer.getAddress();
+        setUser({ ...userInfo, publicKey });
+        console.log("User info set after connection:", { ...userInfo, publicKey });
       } else {
         console.log("web3auth.provider is not available after connection");
       }
@@ -88,28 +87,13 @@ export const AuthProvider = ({ children }) => {
         await web3auth.logout();
         setProvider(null);
         setLoggedIn(false);
+        setUser(null);
         console.log("Logged out successfully");
       } else {
         console.log("web3auth.provider is not available for logout");
       }
     } catch (error) {
       console.error("Error during disconnection:", error);
-    }
-  };
-
-  const getUserInfo = async () => {
-    try {
-      if (!web3auth.connected) {
-        console.log("Cannot get user info, wallet not connected");
-        return null;
-      }
-      console.log("Getting user info...");
-      const user = await web3auth.getUserInfo();
-      console.log("User info:", user);
-      return user;
-    } catch (error) {
-      console.error("Error getting user info:", error);
-      return null;
     }
   };
 
