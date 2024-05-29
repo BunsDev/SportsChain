@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Box, Heading, Grid, Image, Text, Button, useToast, VStack, HStack, Input, Flex } from "@chakra-ui/react";
+import { Box, Heading, Grid, Image, Text, Button, useToast, VStack, HStack, Input, Flex, Spinner } from "@chakra-ui/react";
 import { ethers } from "ethers";
 import { useAuth } from "../context/authContext";
 
@@ -11,6 +11,7 @@ const getLogoFileName = (teamName) => {
 export default function TokenTrading() {
   const [teams, setTeams] = useState([]);
   const [amounts, setAmounts] = useState({}); // Etat pour stocker les montants d'achat et de vente par équipe
+  const [loading, setLoading] = useState({}); // Etat pour gérer le statut de chargement par équipe
   const { user, provider, connect } = useAuth();
   const toast = useToast();
 
@@ -25,12 +26,15 @@ export default function TokenTrading() {
       .then(response => response.json())
       .then(data => {
         setTeams(data.data || []);
-        // Initialiser les montants à "1" pour chaque équipe
+        // Initialiser les montants et le statut de chargement à "1" pour chaque équipe
         const initialAmounts = {};
+        const initialLoading = {};
         data.data.forEach(team => {
           initialAmounts[team.teamId] = { buy: "1", sell: "1" };
+          initialLoading[team.teamId] = { buy: false, sell: false };
         });
         setAmounts(initialAmounts);
+        setLoading(initialLoading);
       })
       .catch(error => {
         console.error('Error fetching teams:', error);
@@ -62,6 +66,8 @@ export default function TokenTrading() {
     }
 
     try {
+      setLoading(prev => ({ ...prev, [team.teamId]: { ...prev[team.teamId], buy: true } }));
+
       const signer = provider.getSigner();
       const tokenManagerAddress = "0xaA3F198893dc661F4273CE6D32F716007681076B"; // Adresse du contrat TokenManager
       const tokenManagerABI = [
@@ -79,7 +85,7 @@ export default function TokenTrading() {
 
       toast({
         title: "Success",
-        description: "Successfully bought tokens.",
+        description: `Successfully bought ${amounts[teamID].buy} tokens.`,
         status: "success",
         duration: 5000,
         isClosable: true,
@@ -94,6 +100,8 @@ export default function TokenTrading() {
         duration: 5000,
         isClosable: true,
       });
+    } finally {
+      setLoading(prev => ({ ...prev, [team.teamId]: { ...prev[team.teamId], buy: false } }));
     }
   };
 
@@ -132,6 +140,8 @@ export default function TokenTrading() {
     }
 
     try {
+      setLoading(prev => ({ ...prev, [team.teamId]: { ...prev[team.teamId], sell: true } }));
+
       const signer = provider.getSigner();
       const tokenManagerAddress = "0xaA3F198893dc661F4273CE6D32F716007681076B"; // Adresse du contrat TokenManager
       const tokenManagerABI = [
@@ -160,7 +170,7 @@ export default function TokenTrading() {
 
       toast({
         title: "Success",
-        description: "Successfully sold tokens.",
+        description: `Successfully sold ${amounts[teamID].sell} tokens.`,
         status: "success",
         duration: 5000,
         isClosable: true,
@@ -175,6 +185,8 @@ export default function TokenTrading() {
         duration: 5000,
         isClosable: true,
       });
+    } finally {
+      setLoading(prev => ({ ...prev, [team.teamId]: { ...prev[team.teamId], sell: false } }));
     }
   };
 
@@ -212,7 +224,9 @@ export default function TokenTrading() {
                     width="100px"
                     color="black"
                   />
-                  <Button colorScheme="green" size="sm" onClick={() => handleBuy(team)}>Buy</Button>
+                  <Button colorScheme="green" size="sm" onClick={() => handleBuy(team)} isLoading={loading[team.teamId]?.buy}>
+                    {loading[team.teamId]?.buy ? <Spinner size="sm" /> : "Buy"}
+                  </Button>
                 </VStack>
                 <VStack>
                   <Input
@@ -222,7 +236,9 @@ export default function TokenTrading() {
                     width="100px"
                     color="black"
                   />
-                  <Button colorScheme="red" size="sm" onClick={() => handleSell(team)}>Sell</Button>
+                  <Button colorScheme="red" size="sm" onClick={() => handleSell(team)} isLoading={loading[team.teamId]?.sell}>
+                    {loading[team.teamId]?.sell ? <Spinner size="sm" /> : "Sell"}
+                  </Button>
                 </VStack>
               </HStack>
             </Flex>
