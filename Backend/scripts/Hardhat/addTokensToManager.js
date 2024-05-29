@@ -9,7 +9,7 @@ const Team = require("../../models/Team"); // Mettez à jour ce chemin si néces
 const teamsFilePath = path.join(__dirname, "..", "teams.json");
 
 // Adresse du contrat TokenManager
-const TOKEN_MANAGER_ADDRESS = "0xaA3F198893dc661F4273CE6D32F716007681076B";
+const TOKEN_MANAGER_ADDRESS = "0xd2365cb73BfbaFCDe7a559698b996D3660369263";
 
 async function main() {
   await mongoose.connect(process.env.MONGODB_URI, {

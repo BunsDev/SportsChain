@@ -2,30 +2,49 @@ import { Box, Button, Heading, Text, Image, VStack, HStack, Flex } from "@chakra
 import { useAuth } from "../context/authContext";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
+import { ethers } from "ethers";
+import teamsData from './teams.json'; // Assurez-vous que le chemin vers votre fichier JSON est correct
 
 export default function Account() {
-  const { user, disconnect } = useAuth();
-  const [tokenBalance, setTokenBalance] = useState(0);
+  const { user, provider, disconnect } = useAuth();
+  const [nativeBalance, setNativeBalance] = useState(0);
+  const [teamBalances, setTeamBalances] = useState([]);
   const router = useRouter();
 
   useEffect(() => {
-    const fetchTokenBalance = async () => {
+    const fetchBalances = async () => {
       try {
-        if (user) {
-          const res = await fetch(`/api/tokenBalance?userId=${user.id}`);
-          if (!res.ok) {
-            throw new Error("Failed to fetch token balance");
-          }
-          const data = await res.json();
-          setTokenBalance(data.balance);
+        if (user && provider) {
+          const signer = provider.getSigner();
+          const userAddress = await signer.getAddress();
+
+          // Fetch native balance (MATIC)
+          const balance = await provider.getBalance(userAddress);
+          setNativeBalance(ethers.utils.formatEther(balance));
+
+          // Fetch team token balances
+          const teamBalances = await Promise.all(teamsData.map(async team => {
+            const tokenContract = new ethers.Contract(team.tokenAddress, [
+              "function balanceOf(address owner) view returns (uint256)"
+            ], signer);
+
+            const balance = await tokenContract.balanceOf(userAddress);
+            return {
+              name: team.name,
+              balance: ethers.utils.formatUnits(balance, 18),
+              symbol: team.symbol
+            };
+          }));
+
+          setTeamBalances(teamBalances);
         }
       } catch (error) {
-        console.error("Error fetching token balance:", error);
+        console.error("Error fetching balances:", error);
       }
     };
 
-    fetchTokenBalance();
-  }, [user]);
+    fetchBalances();
+  }, [user, provider]);
 
   const handleTradeTokens = () => {
     router.push('/teams');
@@ -37,9 +56,14 @@ export default function Account() {
         <Heading as="h1" size="2xl">
           Welcome to Your Account
         </Heading>
-        <Button colorScheme="red" size="lg" onClick={disconnect}>
-          Logout
-        </Button>
+        <HStack>
+          <Button colorScheme="blue" size="lg" onClick={handleTradeTokens}>
+            Trade Tokens
+          </Button>
+          <Button colorScheme="red" size="lg" onClick={disconnect}>
+            Logout
+          </Button>
+        </HStack>
       </Flex>
       
       {user ? (
@@ -61,12 +85,17 @@ export default function Account() {
             </VStack>
           </HStack>
           <Box bg="gray.800" p={4} borderRadius="md" w="full">
-            <Text fontSize="xl" mb={2}>Token Balance</Text>
-            <Text fontSize="2xl" fontWeight="bold">{tokenBalance} TTK</Text>
+            <Text fontSize="xl" mb={2}>Native Balance (MATIC)</Text>
+            <Text fontSize="2xl" fontWeight="bold">{nativeBalance}</Text>
           </Box>
-          <Button colorScheme="blue" size="lg" onClick={handleTradeTokens}>
-            Trade Tokens
-          </Button>
+          {teamBalances.map(team => (
+            team.balance > 0 && (
+              <Box key={team.name} bg="gray.800" p={4} borderRadius="md" w="full">
+                <Text fontSize="xl" mb={2}>{team.name} Token Balance</Text>
+                <Text fontSize="2xl" fontWeight="bold">{team.balance} {team.symbol}</Text>
+              </Box>
+            )
+          ))}
         </VStack>
       ) : (
         <Text fontSize="xl">Loading...</Text>

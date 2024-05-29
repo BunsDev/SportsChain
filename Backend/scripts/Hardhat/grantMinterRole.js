@@ -5,7 +5,7 @@ const path = require("path");
 const teamsFilePath = path.join(__dirname, "..", "teams.json");
 
 const MINTER_ROLE = "0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6";
-const TARGET_CONTRACT_ADDRESS = "0xaA3F198893dc661F4273CE6D32F716007681076B";
+const TARGET_CONTRACT_ADDRESS = "0x661f37b1C04971bB00C6465CdcfF3b540d88810F";
 
 async function main() {
   const [deployer] = await ethers.getSigners();
