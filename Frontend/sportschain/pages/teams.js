@@ -69,7 +69,7 @@ export default function TokenTrading() {
       setLoading(prev => ({ ...prev, [team.teamId]: { ...prev[team.teamId], buy: true } }));
 
       const signer = provider.getSigner();
-      const tokenManagerAddress = "0xaA3F198893dc661F4273CE6D32F716007681076B"; // Adresse du contrat TokenManager
+      const tokenManagerAddress = "0xB43115938E37cD1226dBf2fD854b1d59388f1033"; // Adresse du contrat TokenManager
       const tokenManagerABI = [
         "function buyTokens(uint256 teamID) payable",
         "function getTokenPrice(uint256 teamID) public view returns (uint256)"
@@ -143,7 +143,7 @@ export default function TokenTrading() {
       setLoading(prev => ({ ...prev, [team.teamId]: { ...prev[team.teamId], sell: true } }));
 
       const signer = provider.getSigner();
-      const tokenManagerAddress = "0xaA3F198893dc661F4273CE6D32F716007681076B"; // Adresse du contrat TokenManager
+      const tokenManagerAddress = "0xB43115938E37cD1226dBf2fD854b1d59388f1033"; // Adresse du contrat TokenManager
       const tokenManagerABI = [
         "function sellTokens(uint256 teamID, uint256 amountToSell) payable",
         "function getTokenPrice(uint256 teamID) public view returns (uint256)"
