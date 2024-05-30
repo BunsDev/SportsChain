@@ -78,7 +78,7 @@ export default function TokenTrading() {
 
       const teamID = team.teamId;
       const price = await tokenManager.getTokenPrice(teamID);
-      const amountToBuy = ethers.utils.parseUnits(amounts[teamID].buy, 18);
+      const amountToBuy = ethers.utils.parseUnits(amounts[teamID].buy, 1);
       const totalCost = price.mul(amountToBuy);
       const tx = await tokenManager.buyTokens(teamID, { value: totalCost });
       await tx.wait();
@@ -157,7 +157,7 @@ export default function TokenTrading() {
       const token = new ethers.Contract(team.tokenAddress, tokenABI, signer);
 
       const teamID = team.teamId;
-      const amountToSell = ethers.utils.parseUnits(amounts[teamID].sell, 18); // Montant à vendre
+      const amountToSell = ethers.utils.parseUnits(amounts[teamID].sell, 1); // Montant à vendre
       const allowance = await token.allowance(user.publicKey, tokenManagerAddress);
 
       if (allowance.lt(amountToSell)) {
