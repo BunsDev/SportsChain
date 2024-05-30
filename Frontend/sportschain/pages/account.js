@@ -31,7 +31,7 @@ export default function Account() {
             const balance = await tokenContract.balanceOf(userAddress);
             return {
               name: team.name,
-              balance: ethers.utils.formatUnits(balance, 18),
+              balance: ethers.utils.formatUnits(balance, 1),
               symbol: team.symbol
             };
           }));
